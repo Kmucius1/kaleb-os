@@ -46,5 +46,4 @@ All emails Hermes sends require explicit approval click. No auto-send. No except
 ---
 
 ## Domain
-<!-- What domain are you using for the Cloudflare tunnel? e.g. kalebos.app -->
-**Domain:**
+**Domain:** kalebos.app (registered on Cloudflare, 2026-04-27)
