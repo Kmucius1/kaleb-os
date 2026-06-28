@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 import { supabaseDryp } from "./supabaseDryp";
 import { supabaseLedger } from "./supabaseLedger";
 import { logIdea, addTask, draftMessage, getToday, remember } from "./kalebos-actions";
+import { getTradingSnapshot } from "./tradeprint";
 
 // Persona + what Kaleb OS knows about Kaleb — injected into the assistant's system prompt.
 export async function getContext(): Promise<{ persona: string; profile: string[] }> {
@@ -23,6 +24,7 @@ export const TOOLS = [
   { type: "function", function: { name: "log_idea", description: "Save an idea Kaleb mentions.", parameters: { type: "object", properties: { idea: { type: "string" } }, required: ["idea"] } } },
   { type: "function", function: { name: "add_task", description: "Add a to-do/reminder.", parameters: { type: "object", properties: { title: { type: "string" } }, required: ["title"] } } },
   { type: "function", function: { name: "remember", description: "Save a lasting fact about Kaleb (a preference, how he works, something he likes/dislikes, his goals) so you know him better over time.", parameters: { type: "object", properties: { fact: { type: "string" } }, required: ["fact"] } } },
+  { type: "function", function: { name: "get_trading", description: "Kaleb's latest trading journal + psychology from TradePrint (readiness, discipline streak, reflections, rule violations). Use for trading-mindset/discipline questions.", parameters: { type: "object", properties: {} } } },
 ] as const;
 
 const money = (n: number) => "$" + Math.round(n).toLocaleString();
@@ -65,6 +67,10 @@ export async function execTool(name: string, args: Record<string, unknown>): Pro
     case "log_idea": return await logIdea({ idea: String(args.idea) });
     case "add_task": return await addTask({ title: String(args.title) });
     case "remember": return await remember({ fact: String(args.fact) });
+    case "get_trading": {
+      try { return await getTradingSnapshot(); }
+      catch { return { error: "TradePrint not connected yet (needs its service key)." }; }
+    }
     default: return { error: `unknown tool ${name}` };
   }
 }
