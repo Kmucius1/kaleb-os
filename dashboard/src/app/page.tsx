@@ -26,10 +26,22 @@ export default function HomeChat() {
 
   useEffect(() => { scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' }) }, [messages, loading])
 
-  function say(text: string) {
-    if (!speak || typeof window === 'undefined' || !window.speechSynthesis) return
-    window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance(forSpeech(text)))
+  async function say(text: string) {
+    if (!speak) return
+    try {
+      const res = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: forSpeech(text) }) })
+      if (!res.ok) throw new Error('tts')
+      const url = URL.createObjectURL(await res.blob())
+      const audio = new Audio(url)
+      audio.onended = () => URL.revokeObjectURL(url)
+      await audio.play()
+    } catch {
+      // fallback to free browser voice
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel()
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(forSpeech(text)))
+      }
+    }
   }
 
   async function send(text?: string) {
