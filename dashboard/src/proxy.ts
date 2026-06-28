@@ -8,8 +8,12 @@ export function proxy(request: NextRequest) {
   if (!token) return NextResponse.next()
 
   const { pathname } = request.nextUrl
-  // Always allow the login screen, its API, and cron routes (cron self-auths with CRON_SECRET).
-  if (pathname === '/login' || pathname === '/api/login' || pathname.startsWith('/api/cron/')) {
+  // Always allow: login screen + API, cron (self-auths with CRON_SECRET), MCP (self-auths with MCP_SECRET).
+  if (
+    pathname === '/login' || pathname === '/api/login' ||
+    pathname.startsWith('/api/cron/') ||
+    pathname === '/api/mcp' || pathname === '/api/sse' || pathname === '/api/message'
+  ) {
     return NextResponse.next()
   }
 
