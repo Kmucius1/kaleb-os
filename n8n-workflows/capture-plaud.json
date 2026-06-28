@@ -1,0 +1,70 @@
+{
+  "name": "capture-plaud",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "plaud-capture",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "b2000001-0000-0000-0000-000000000001",
+      "name": "PLAUD Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "plaud-capture"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/raw_captures?on_conflict=source,source_id",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=ignore-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'plaud', source_id: $json.body.id || $json.body.record_id || $json.body.recording_id, content_type: 'voice_note', content_text: $json.body.transcription || $json.body.transcript || $json.body.summary || '', metadata: { title: $json.body.title || $json.body.name || '', summary: $json.body.summary || '', duration: $json.body.duration || null, recorded_at: $json.body.created_at || $json.body.date || null } }) }}",
+        "options": {}
+      },
+      "id": "b2000001-0000-0000-0000-000000000002",
+      "name": "Save to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    }
+  ],
+  "connections": {
+    "PLAUD Webhook": {
+      "main": [
+        [{ "node": "Save to Supabase", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1
+}

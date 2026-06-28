@@ -1,0 +1,6 @@
+{
+  "buildCommand": "NEXT_ADAPTER_PATH= next build",
+  "crons": [
+    { "path": "/api/cron/morning-brief", "schedule": "0 11 * * *" }
+  ]
+}
