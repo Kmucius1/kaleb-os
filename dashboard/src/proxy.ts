@@ -8,11 +8,14 @@ export function proxy(request: NextRequest) {
   if (!token) return NextResponse.next()
 
   const { pathname } = request.nextUrl
-  // Always allow: login screen + API, cron (self-auths with CRON_SECRET), MCP (self-auths with MCP_SECRET).
+  // Always allow: login screen + API, cron (self-auths with CRON_SECRET), MCP (self-auths with MCP_SECRET),
+  // and public PWA assets (manifest/sw/icons) so the app can install + show its icon.
   if (
     pathname === '/login' || pathname === '/api/login' ||
     pathname.startsWith('/api/cron/') ||
-    pathname === '/api/mcp' || pathname === '/api/sse' || pathname === '/api/message'
+    pathname === '/api/mcp' || pathname === '/api/sse' || pathname === '/api/message' ||
+    pathname === '/manifest.webmanifest' || pathname === '/sw.js' ||
+    pathname === '/apple-touch-icon.png' || pathname.startsWith('/icon')
   ) {
     return NextResponse.next()
   }
