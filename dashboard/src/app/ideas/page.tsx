@@ -8,19 +8,19 @@ type Idea = {
   title: string
   description: string | null
   category: string | null
-  priority: string | null
+  priority: string | number | null
   status: string | null
   source_ref: string | null
   created_at: string
 }
 
-function priorityColor(priority: string | null) {
+function priorityColor(priority: string | number | null) {
   const map: Record<string, string> = {
-    high: 'var(--accent)',
-    medium: '#f59e0b',
-    low: 'var(--muted)',
+    high: 'var(--accent)', '1': 'var(--accent)', '2': 'var(--accent)',
+    medium: '#f59e0b', '3': '#f59e0b', '4': '#f59e0b',
+    low: 'var(--muted)', '5': 'var(--muted)', '6': 'var(--muted)',
   }
-  return map[priority ?? ''] ?? 'var(--muted)'
+  return map[String(priority ?? '')] ?? 'var(--muted)'
 }
 
 export default async function IdeasPage() {
@@ -96,7 +96,7 @@ export default async function IdeasPage() {
               <tr key={idea.id} style={{ borderBottom: '1px solid #161616', background: i % 2 === 1 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
                 <td style={{ padding: '10px 16px 10px 0' }}>
                   <span style={{ fontSize: 9, fontWeight: 700, color: priorityColor(idea.priority), letterSpacing: '0.06em' }}>
-                    {(idea.priority ?? '—').toUpperCase()}
+                    {idea.priority != null ? `P${idea.priority}` : '—'}
                   </span>
                 </td>
                 <td style={{ padding: '10px 16px 10px 0', fontSize: 10, color: 'var(--muted)' }}>
