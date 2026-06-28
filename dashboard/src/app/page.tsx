@@ -46,9 +46,10 @@ export default async function MorningHome() {
     const active = (accts ?? []).filter(a => a.is_active)
     activeClients = active.length
     clientNames = active.map(a => (a.business_name as string).trim()).slice(0, 4)
-    const fresh = (leads ?? []).filter(l => l.stage === 'new')
-    newLeads = fresh.length
-    recentLeads = fresh.slice(0, 3)
+    const open = (leads ?? []).filter(l => !['won', 'lost', 'completed'].includes(l.stage as string))
+    const brandNew = open.filter(l => l.stage === 'not_started')
+    newLeads = brandNew.length
+    recentLeads = (brandNew.length ? brandNew : open).slice(0, 3)
   } catch { /* CRM optional */ }
 
   // ── DRYP Ledger ──

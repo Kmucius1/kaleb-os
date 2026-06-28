@@ -1,158 +1,123 @@
 import { supabaseDryp } from '@/lib/supabaseDryp'
-import { Briefcase } from 'lucide-react'
-import { formatTime } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
+import { getRevenueSnapshot, type RevenueSnapshot } from '@/lib/ledger'
+import InlineSelect from '@/components/InlineSelect'
+import { Briefcase, ExternalLink } from 'lucide-react'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
+
+const LEAD_STAGES = ['not_started', 'info_collected', 'in_progress', 'waiting_on_client', 'finalizing', 'completed', 'won', 'lost', 'nurture']
+const HEALTH = ['excellent', 'good', 'at_risk', 'churning', 'new']
+const STAGE_COLOR: Record<string, string> = {
+  not_started: '#60a5fa', info_collected: '#60a5fa', in_progress: '#fbbf24', waiting_on_client: '#fbbf24',
+  finalizing: '#a78bfa', completed: '#34d399', won: '#34d399', lost: '#f87171', nurture: '#6b7280',
+}
+const HEALTH_COLOR: Record<string, string> = {
+  excellent: '#34d399', good: '#34d399', new: '#60a5fa', at_risk: '#fbbf24', churning: '#f87171',
+}
+const money = (n: number) => '$' + Math.round(n).toLocaleString()
+const OPEN = (s: string) => !['won', 'lost', 'completed'].includes(s)
 
 export default async function BusinessPage() {
-  const [{ data: leads }, { data: accounts }, { data: projects }] = await Promise.all([
-    supabaseDryp.from('leads').select('business_name,contact_name,stage,estimated_value,next_action,last_contact_date').order('created_at', { ascending: false }),
-    supabaseDryp.from('accounts').select('business_name,is_active,health_status,monthly_retainer,onboarding_status').order('created_at', { ascending: false }),
-    supabaseDryp.from('projects').select('name,status,phase,billing_amount,due_date,account_id').order('created_at', { ascending: false }),
+  const [{ data: leads }, { data: accounts }, { data: brands }] = await Promise.all([
+    supabaseDryp.from('leads').select('id,business_name,contact_name,stage,estimated_value,next_action,source').order('created_at', { ascending: false }),
+    supabaseDryp.from('accounts').select('id,business_name,is_active,health_status,monthly_retainer,onboarding_status').order('business_name'),
+    supabase.from('brands').select('crm_account_id,services').not('crm_account_id', 'is', null),
   ])
+  let rev: RevenueSnapshot | null = null
+  try { rev = await getRevenueSnapshot() } catch { /* ledger optional */ }
 
   const allLeads = leads ?? []
-  const allAccounts = accounts ?? []
-  const allProjects = projects ?? []
-
-  const activeAccounts = allAccounts.filter(a => a.is_active)
-  const activeProjects = allProjects.filter(p => p.status === 'active')
-  const pipelineValue = allLeads.reduce((sum, l) => sum + (l.estimated_value ?? 0), 0)
-  const projectRevenue = activeProjects.reduce((sum, p) => sum + (p.billing_amount ?? 0), 0)
-
-  function stageColor(stage: string) {
-    const map: Record<string, string> = {
-      not_started: 'var(--muted)',
-      in_progress: 'var(--accent)',
-      won: '#22c55e',
-      lost: 'var(--red)',
-      on_hold: '#f59e0b',
-    }
-    return map[stage] ?? 'var(--muted)'
-  }
-
-  function healthColor(h: string) {
-    const map: Record<string, string> = {
-      good: '#22c55e',
-      new: '#3b82f6',
-      at_risk: '#f59e0b',
-      churned: 'var(--red)',
-    }
-    return map[h] ?? 'var(--muted)'
-  }
-
-  function phaseLabel(phase: string) {
-    return phase?.replace(/_/g, ' ') ?? '—'
-  }
+  const openLeads = allLeads.filter(l => OPEN(l.stage))
+  const activeAccounts = (accounts ?? []).filter(a => a.is_active)
+  const pipeline = openLeads.reduce((s, l) => s + Number(l.estimated_value ?? 0), 0)
+  const mrr = activeAccounts.reduce((s, a) => s + Number(a.monthly_retainer ?? 0), 0)
+  const servicesByAcct = new Map((brands ?? []).map(b => [b.crm_account_id, b.services as string[]]))
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1200 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
-        <Briefcase size={16} color="var(--accent)" />
-        <span style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: 16, letterSpacing: '0.06em' }}>BUSINESS</span>
-        <span style={{ color: 'var(--muted)', fontSize: 10 }}>DRYP · Advantage Media Agency</span>
+    <div style={{ padding: '28px 32px', maxWidth: 1180 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
+        <Briefcase size={17} color="var(--accent)" />
+        <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.01em' }}>Business</span>
+        <span style={{ color: 'var(--muted)', fontSize: 12 }}>DRYP · CRM</span>
+        <a href="https://www.dryphub.com" target="_blank" rel="noopener noreferrer"
+          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--foreground-2)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px' }}>
+          <ExternalLink size={13} color="var(--accent)" /> Open DRYP Hub
+        </a>
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 28 }}>
-        {[
-          { label: 'PIPELINE VALUE', value: `$${pipelineValue.toLocaleString()}`, color: '#f59e0b' },
-          { label: 'ACTIVE CLIENTS', value: String(activeAccounts.length), color: '#22c55e' },
-          { label: 'ACTIVE PROJECTS', value: String(activeProjects.length), color: 'var(--accent)' },
-          { label: 'PROJECT REVENUE', value: `$${projectRevenue.toLocaleString()}`, color: '#3b82f6' },
-        ].map((s, i) => (
-          <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '16px' }}>
-            <div style={{ fontSize: 9, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 8 }}>{s.label}</div>
-            <div style={{ fontSize: 26, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, margin: '20px 0 28px' }}>
+        <StatCard label="PIPELINE (OPEN)" value={money(pipeline)} accent="#fbbf24" />
+        <StatCard label="MRR (RETAINERS)" value={money(mrr)} accent="#34d399" />
+        <StatCard label="ACTIVE CLIENTS" value={String(activeAccounts.length)} accent="#22d3ee" />
+        <StatCard label="CASH IN (CFO)" value={rev ? money(rev.cashIn) : '—'} accent="#a78bfa" sub={rev ? `${money(rev.thisMonth)} this mo` : undefined} />
+      </div>
+
+      {/* LEADS */}
+      <SectionTitle>LEADS · {openLeads.length} open</SectionTitle>
+      <Table cols={['Lead', 'Stage', 'Est. value', 'Next action', 'Source']}>
+        {allLeads.map(l => (
+          <tr key={l.id} style={{ borderTop: '1px solid var(--border)' }}>
+            <Td><b style={{ color: 'var(--foreground)' }}>{(l.business_name || '—').trim()}</b>{l.contact_name && <span style={{ color: 'var(--muted)' }}> · {l.contact_name}</span>}</Td>
+            <Td><InlineSelect table="leads" id={l.id} field="stage" value={l.stage} options={LEAD_STAGES} colors={STAGE_COLOR} /></Td>
+            <Td>{l.estimated_value ? money(Number(l.estimated_value)) : '—'}</Td>
+            <Td muted>{l.next_action || '—'}</Td>
+            <Td muted>{l.source || '—'}</Td>
+          </tr>
         ))}
-      </div>
+        {allLeads.length === 0 && <tr><Td muted>No leads.</Td></tr>}
+      </Table>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-        {/* Leads Pipeline */}
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', marginBottom: 10 }}>
-            LEADS PIPELINE ({allLeads.length})
-          </div>
-          {allLeads.length === 0 ? (
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>
-              — no leads yet —
-            </div>
-          ) : (
-            allLeads.map((lead, i) => (
-              <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '12px 14px', marginBottom: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--foreground)' }}>{lead.business_name?.trim()}</div>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: stageColor(lead.stage), border: `1px solid ${stageColor(lead.stage)}33`, padding: '2px 6px', borderRadius: 3, letterSpacing: '0.06em', whiteSpace: 'nowrap', marginLeft: 8 }}>
-                    {lead.stage?.replace(/_/g, ' ').toUpperCase() ?? '—'}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 10, color: 'var(--muted)' }}>{lead.contact_name}</div>
-                  {lead.estimated_value && (
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b' }}>${lead.estimated_value.toLocaleString()}</div>
-                  )}
-                </div>
-                {lead.next_action && (
-                  <div style={{ fontSize: 9, color: 'var(--muted)', marginTop: 4, borderTop: '1px solid #1a1a1a', paddingTop: 4 }}>
-                    Next: {lead.next_action.slice(0, 60)}{lead.next_action.length > 60 ? '…' : ''}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Active Projects */}
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', marginBottom: 10 }}>
-            ACTIVE PROJECTS ({activeProjects.length})
-          </div>
-          {activeProjects.length === 0 ? (
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>
-              — no active projects —
-            </div>
-          ) : (
-            activeProjects.map((p, i) => (
-              <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '12px 14px', marginBottom: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--foreground)' }}>{p.name}</div>
-                  {p.billing_amount && (
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#3b82f6', whiteSpace: 'nowrap', marginLeft: 8 }}>${p.billing_amount.toLocaleString()}</div>
-                  )}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'capitalize' }}>{phaseLabel(p.phase)}</div>
-                  {p.due_date && (
-                    <div style={{ fontSize: 9, color: 'var(--muted)' }}>Due {new Date(p.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Active Clients */}
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', marginBottom: 10 }}>
-        CLIENT ROSTER ({activeAccounts.length} active)
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-        {allAccounts.map((a, i) => (
-          <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '12px 14px', opacity: a.is_active ? 1 : 0.5 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--foreground)' }}>{a.business_name?.trim()}</div>
-              <span style={{ fontSize: 8, fontWeight: 700, color: healthColor(a.health_status), letterSpacing: '0.06em' }}>
-                {a.health_status?.toUpperCase() ?? '—'}
-              </span>
-            </div>
-            <div style={{ fontSize: 9, color: 'var(--muted)' }}>
-              {a.is_active ? 'Active' : 'Inactive'} · {a.onboarding_status ?? '—'}
-              {a.monthly_retainer ? ` · $${a.monthly_retainer}/mo` : ''}
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* CLIENTS */}
+      <div style={{ height: 28 }} />
+      <SectionTitle>CLIENTS · {activeAccounts.length} active</SectionTitle>
+      <Table cols={['Client', 'Health', 'Retainer', 'Services (Kaleb OS)', 'Onboarding']}>
+        {activeAccounts.map(a => {
+          const svc = servicesByAcct.get(a.id) ?? []
+          return (
+            <tr key={a.id} style={{ borderTop: '1px solid var(--border)' }}>
+              <Td><b style={{ color: 'var(--foreground)' }}>{(a.business_name || '—').trim()}</b></Td>
+              <Td><InlineSelect table="accounts" id={a.id} field="health_status" value={a.health_status} options={HEALTH} colors={HEALTH_COLOR} /></Td>
+              <Td>{a.monthly_retainer ? money(Number(a.monthly_retainer)) + '/mo' : '—'}</Td>
+              <Td>{svc.length ? svc.map(s => <Chip key={s} text={s.replace('_', ' ')} />) : <span style={{ color: 'var(--muted)' }}>—</span>}</Td>
+              <Td muted>{(a.onboarding_status || '—').replace(/_/g, ' ')}</Td>
+            </tr>
+          )
+        })}
+        {activeAccounts.length === 0 && <tr><Td muted>No active clients.</Td></tr>}
+      </Table>
     </div>
   )
+}
+
+// helpers
+function StatCard({ label, value, accent, sub }: { label: string; value: string; accent: string; sub?: string }) {
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `3px solid ${accent}`, borderRadius: 12, padding: '14px 16px' }}>
+      <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>{value}</div>
+      <div style={{ fontSize: 9.5, color: 'var(--muted)', letterSpacing: '0.06em', marginTop: 2 }}>{label}</div>
+      {sub && <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 4 }}>{sub}</div>}
+    </div>
+  )
+}
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--foreground-2)', marginBottom: 10 }}>{children}</div>
+}
+function Table({ cols, children }: { cols: string[]; children: React.ReactNode }) {
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <thead><tr>{cols.map(c => <th key={c} style={{ textAlign: 'left', padding: '10px 14px', fontSize: 10, color: 'var(--muted)', letterSpacing: '0.06em', fontWeight: 600 }}>{c.toUpperCase()}</th>)}</tr></thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
+  )
+}
+function Td({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
+  return <td style={{ padding: '11px 14px', color: muted ? 'var(--muted)' : 'var(--foreground-2)', verticalAlign: 'middle' }}>{children}</td>
+}
+function Chip({ text }: { text: string }) {
+  return <span style={{ fontSize: 10, color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 5, padding: '2px 7px', marginRight: 5, textTransform: 'capitalize' }}>{text}</span>
 }
