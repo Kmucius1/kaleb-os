@@ -17,7 +17,7 @@ const buildNav = (approvalCount: number, taskCount: number): NavSection[] => [
   {
     title: 'COMMAND',
     items: [
-      { href: '/', label: 'Kaleb OS', icon: Sparkles },
+      { href: '/', label: 'Atlas', icon: Sparkles },
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { href: '/daily-brief', label: 'Daily Brief', icon: FileText },
       { href: '/approvals', label: 'Approvals', icon: CheckCircle2, badge: approvalCount },

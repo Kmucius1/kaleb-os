@@ -70,7 +70,8 @@ export default function HomeChat() {
         <div style={{ width: 26, height: 26, borderRadius: 8, background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Sparkles size={14} color="#0a0b0f" />
         </div>
-        <span style={{ fontWeight: 700, fontSize: 15 }}>Kaleb OS</span>
+        <span style={{ fontWeight: 700, fontSize: 15 }}>Atlas</span>
+        <span style={{ fontSize: 10, color: 'var(--muted)', letterSpacing: '0.04em' }}>Kaleb OS</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
           <button onClick={() => setSpeak(s => !s)} title="Speak replies" style={iconBtn(speak)}>
             {speak ? <Volume2 size={16} /> : <VolumeX size={16} />}
