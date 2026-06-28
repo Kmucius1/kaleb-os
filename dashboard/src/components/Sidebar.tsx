@@ -1,12 +1,13 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 import {
   LayoutDashboard, FileText, CheckCircle2,
   CheckSquare, Target, FolderOpen, Lightbulb,
   Inbox, Brain, Users, TrendingUp,
   BarChart2, Briefcase, Star, Calendar,
-  Zap, Link2, ScrollText, Settings, ChevronRight, Wallet, Clapperboard
+  Zap, Link2, ScrollText, Settings, ChevronRight, Wallet, Clapperboard, Sparkles, Menu, X
 } from 'lucide-react'
 
 type NavItem = { href: string; label: string; icon: React.ElementType; badge?: number }
@@ -16,7 +17,8 @@ const buildNav = (approvalCount: number, taskCount: number): NavSection[] => [
   {
     title: 'COMMAND',
     items: [
-      { href: '/', label: 'Command Center', icon: LayoutDashboard },
+      { href: '/', label: 'Home', icon: LayoutDashboard },
+      { href: '/ask', label: 'Ask Kaleb OS', icon: Sparkles },
       { href: '/daily-brief', label: 'Daily Brief', icon: FileText },
       { href: '/approvals', label: 'Approvals', icon: CheckCircle2, badge: approvalCount },
     ],
@@ -75,9 +77,17 @@ export default function Sidebar({
 }) {
   const pathname = usePathname()
   const sections = buildNav(approvalCount, taskCount)
+  const [open, setOpen] = useState(false)
 
   return (
-    <nav style={{
+    <>
+    <button className="kos-hamburger" onClick={() => setOpen(o => !o)} aria-label="Menu" style={{
+      position: 'fixed', top: 12, right: 12, zIndex: 210,
+      width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+      background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--foreground)', cursor: 'pointer',
+    }}>{open ? <X size={18} /> : <Menu size={18} />}</button>
+    {open && <div className="kos-backdrop" onClick={() => setOpen(false)} />}
+    <nav className={`kos-sidebar${open ? ' kos-open' : ''}`} style={{
       width: 216,
       minWidth: 216,
       background: '#0a0a0a',
@@ -119,6 +129,7 @@ export default function Sidebar({
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => setOpen(false)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -187,5 +198,6 @@ export default function Sidebar({
         <Settings size={13} color="var(--muted)" style={{ cursor: 'pointer', flexShrink: 0 }} />
       </div>
     </nav>
+    </>
   )
 }
