@@ -32,7 +32,7 @@ export default async function Dashboard() {
 
   let tasks: { title: string }[] = []
   try {
-    const { data } = await supabase.from('tasks').select('title,status').in('status', ['todo', 'pending']).limit(5)
+    const { data } = await supabase.from('tasks').select('title,status').in('status', ['pending', 'in_progress']).limit(5)
     tasks = data ?? []
   } catch { /* tasks table optional */ }
 

@@ -4,9 +4,11 @@ import { supabase } from "./supabase";
 import { supabaseDryp } from "./supabaseDryp";
 
 // ── capture ──────────────────────────────────────────────────────────
+const IDEA_TYPES = ["content", "business", "trading", "personal"];
 export async function logIdea(input: { idea: string; category?: string }) {
+  const type = IDEA_TYPES.includes(input.category ?? "") ? input.category : "personal";
   const { data, error } = await supabase.from("ideas")
-    .insert({ title: input.idea.slice(0, 200), content: input.idea, category: input.category ?? null })
+    .insert({ title: input.idea.slice(0, 200), content: input.idea, type, status: "raw" })
     .select("id").single();
   if (error) throw new Error(error.message);
   return { id: data?.id, saved: "ideas" };
@@ -40,8 +42,8 @@ export async function addJournal(input: { content: string; kind?: string }) {
 
 export async function addTask(input: { title: string; deadline?: string; category?: string }) {
   const { data, error } = await supabase.from("tasks")
-    .insert({ title: input.title, deadline: input.deadline ?? null, category: input.category ?? null,
-      status: "todo", created_by: "claude" }).select("id").single();
+    .insert({ title: input.title, due_date: input.deadline ?? null, status: "pending" })
+    .select("id").single();
   if (error) throw new Error(error.message);
   return { id: data?.id, saved: "tasks" };
 }
@@ -61,7 +63,7 @@ export async function logProject(input: { name: string; note: string; status?: s
   // upsert the project by name, and store the update as a tagged memory
   const { data: existing } = await supabase.from("projects").select("id").ilike("name", input.name).maybeSingle();
   if (!existing) {
-    await supabase.from("projects").insert({ name: input.name, status: input.status ?? "active", category: "business" });
+    await supabase.from("projects").insert({ name: input.name, status: input.status ?? "active", description: input.note });
   } else if (input.status) {
     await supabase.from("projects").update({ status: input.status }).eq("id", existing.id);
   }
@@ -96,9 +98,9 @@ export async function updateClient(input: { name: string; health?: string; lead_
 // ── drafts (NEVER auto-send — locked decision: emails need approval) ──
 export async function draftMessage(input: { channel: string; to: string; body: string }) {
   const { data, error } = await supabase.from("agent_actions").insert({
-    action_type: "send_message", risk_tier: "medium", status: "awaiting_approval",
+    action_type: "send_message", status: "pending_approval",
+    description: `Draft ${input.channel} to ${input.to} — awaiting approval`,
     payload: { channel: input.channel, to: input.to, body: input.body },
-    reasoning: "Drafted from Claude voice/chat — awaiting Kaleb's approval before sending.",
   }).select("id").single();
   if (error) throw new Error(error.message);
   return { id: data?.id, status: "awaiting_approval", note: "Saved to approval queue. NOT sent." };
@@ -108,7 +110,7 @@ export async function draftMessage(input: { channel: string; to: string; body: s
 export async function getToday() {
   const [{ data: ideas }, { data: tasks }, { count: scripts }] = await Promise.all([
     supabase.from("content_ideas").select("title,angle").eq("status", "idea").order("created_at", { ascending: false }).limit(5),
-    supabase.from("tasks").select("title").eq("status", "todo").limit(8),
+    supabase.from("tasks").select("title").eq("status", "pending").limit(8),
     supabase.from("content_scripts").select("id", { count: "exact", head: true }).eq("status", "draft"),
   ]);
   let clients = 0, openLeads = 0;
