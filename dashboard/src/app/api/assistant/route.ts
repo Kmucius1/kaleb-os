@@ -1,5 +1,5 @@
 import { LLM_MODEL } from "@/lib/llm";
-import { TOOLS, execTool } from "@/lib/assistant";
+import { TOOLS, execTool, getContext } from "@/lib/assistant";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -14,14 +14,18 @@ export async function POST(request: Request) {
     if (!key) return Response.json({ error: "OPENROUTER_API_KEY not set" }, { status: 500 });
 
     const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "America/New_York" });
+    const { persona, profile } = await getContext();
     const system = [
-      "You are Kaleb OS — Kaleb's personal operating-system assistant. He talks to you on the go (voice-dictated).",
-      "Be concise, direct, no fluff (he dislikes fluff). Answer like a sharp chief of staff.",
+      persona || "You are Kaleb's personal AI — sharp, warm, direct, in his corner.",
+      profile.length ? `\nWHAT YOU KNOW ABOUT KALEB:\n- ${profile.join("\n- ")}` : "",
+      "\nRULES:",
       "ALWAYS use tools to look up REAL data before answering about money, clients, P&L, tasks, or content — never guess numbers.",
-      "For emails: FIRST call search_emails to understand the history with that person, then draft_email. Drafts go to an approval queue and are NEVER auto-sent.",
-      "If a brand-new email and you lack context, ask Kaleb what it should say before drafting.",
+      "For emails: FIRST call search_emails to understand history with that person, then draft_email. Drafts go to the approval queue and are NEVER auto-sent.",
+      "If it's a brand-new email and you lack context, ask Kaleb what it should say first.",
+      "When Kaleb tells you something lasting about himself (a preference, how he works, a goal), call remember so you know him better next time.",
+      "Just do low-risk actions (log idea, add task, pull data). Ask before anything that sends, spends, or deletes.",
       `Today is ${today}.`,
-    ].join(" ");
+    ].join("\n");
 
     const messages: Msg[] = [{ role: "system", content: system }, ...(incoming ?? [])];
     const actions: { tool: string; args: unknown }[] = [];

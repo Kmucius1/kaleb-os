@@ -2,7 +2,16 @@
 import { supabase } from "./supabase";
 import { supabaseDryp } from "./supabaseDryp";
 import { supabaseLedger } from "./supabaseLedger";
-import { logIdea, addTask, draftMessage, getToday } from "./kalebos-actions";
+import { logIdea, addTask, draftMessage, getToday, remember } from "./kalebos-actions";
+
+// Persona + what Kaleb OS knows about Kaleb — injected into the assistant's system prompt.
+export async function getContext(): Promise<{ persona: string; profile: string[] }> {
+  const [{ data: cfg }, { data: mems }] = await Promise.all([
+    supabase.from("kalebos_config").select("value").eq("key", "persona").maybeSingle(),
+    supabase.from("memories").select("content").contains("tags", ["about-kaleb"]).limit(40),
+  ]);
+  return { persona: cfg?.value ?? "", profile: (mems ?? []).map(m => m.content as string) };
+}
 
 // OpenAI/OpenRouter-style tool definitions.
 export const TOOLS = [
@@ -13,6 +22,7 @@ export const TOOLS = [
   { type: "function", function: { name: "draft_email", description: "Draft an email (goes to approval queue, never auto-sends).", parameters: { type: "object", properties: { to: { type: "string" }, subject: { type: "string" }, body: { type: "string" } }, required: ["to", "body"] } } },
   { type: "function", function: { name: "log_idea", description: "Save an idea Kaleb mentions.", parameters: { type: "object", properties: { idea: { type: "string" } }, required: ["idea"] } } },
   { type: "function", function: { name: "add_task", description: "Add a to-do/reminder.", parameters: { type: "object", properties: { title: { type: "string" } }, required: ["title"] } } },
+  { type: "function", function: { name: "remember", description: "Save a lasting fact about Kaleb (a preference, how he works, something he likes/dislikes, his goals) so you know him better over time.", parameters: { type: "object", properties: { fact: { type: "string" } }, required: ["fact"] } } },
 ] as const;
 
 const money = (n: number) => "$" + Math.round(n).toLocaleString();
@@ -54,6 +64,7 @@ export async function execTool(name: string, args: Record<string, unknown>): Pro
     case "draft_email": return await draftMessage({ channel: "email", to: String(args.to), body: `Subject: ${args.subject || "(none)"}\n\n${args.body}` });
     case "log_idea": return await logIdea({ idea: String(args.idea) });
     case "add_task": return await addTask({ title: String(args.title) });
+    case "remember": return await remember({ fact: String(args.fact) });
     default: return { error: `unknown tool ${name}` };
   }
 }

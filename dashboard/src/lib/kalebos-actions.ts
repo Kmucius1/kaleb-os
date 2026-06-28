@@ -23,6 +23,14 @@ export async function logContentIdea(input: { brand: string; hook: string; platf
   return { id: data?.id, saved: "content_ideas" };
 }
 
+export async function remember(input: { fact: string; permanent?: boolean }) {
+  const { data, error } = await supabase.from("memories")
+    .insert({ content: input.fact, type: input.permanent === false ? "temporary" : "permanent", tags: ["about-kaleb"] })
+    .select("id").single();
+  if (error) throw new Error(error.message);
+  return { id: data?.id, saved: "remembered about Kaleb" };
+}
+
 export async function addJournal(input: { content: string; kind?: string }) {
   const { data, error } = await supabase.from("journal")
     .insert({ content: input.content, kind: input.kind ?? "reflection" }).select("id").single();
@@ -58,8 +66,7 @@ export async function logProject(input: { name: string; note: string; status?: s
     await supabase.from("projects").update({ status: input.status }).eq("id", existing.id);
   }
   await supabase.from("memories").insert({
-    summary: `[${input.name}] ${input.note}`.slice(0, 300), full_content: input.note,
-    memory_tier: "permanent", category: "business", tags: [input.name],
+    content: `[project: ${input.name}] ${input.note}`, type: "permanent", tags: [input.name, "project"],
   });
   return { saved: "projects+memories", project: input.name };
 }
@@ -79,8 +86,7 @@ export async function updateClient(input: { name: string; health?: string; lead_
   }
   if (input.note) {
     await supabase.from("memories").insert({
-      summary: `[client: ${input.name}] ${input.note}`.slice(0, 300), full_content: input.note,
-      memory_tier: "temporary", category: "business", tags: [input.name, "client"],
+      content: `[client: ${input.name}] ${input.note}`, type: "temporary", tags: [input.name, "client"],
     });
     out.note_saved = true;
   }
