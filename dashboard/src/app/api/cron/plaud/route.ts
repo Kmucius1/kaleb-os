@@ -55,8 +55,17 @@ export async function GET(request: Request) {
         results.push({ file_id: f.id, name: f.name, error: (e as Error).message });
       }
     }
+    // Heartbeat so we can confirm the cron actually fires (and see last activity).
+    await supabase.from("kalebos_config").upsert(
+      { key: "plaud_sync_last", value: JSON.stringify({ at: new Date().toISOString(), listed: files.length, ...log }) },
+      { onConflict: "key" },
+    );
     return Response.json({ ok: true, ...log, results });
   } catch (e) {
+    await supabase.from("kalebos_config").upsert(
+      { key: "plaud_sync_last", value: JSON.stringify({ at: new Date().toISOString(), error: (e as Error).message }) },
+      { onConflict: "key" },
+    ).then(() => {}, () => {});
     return Response.json({ ok: false, error: (e as Error).message, ...log }, { status: 200 });
   }
 }
