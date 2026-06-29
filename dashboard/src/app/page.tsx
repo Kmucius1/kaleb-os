@@ -94,8 +94,19 @@ export default function HomeChat() {
     const SR = w.SpeechRecognition || w.webkitSpeechRecognition
     if (!SR) { alert('Voice input isn’t supported in this browser. Dictate with Wispr Flow into the box instead.'); return }
     const rec = new SR()
-    rec.lang = 'en-US'; rec.interimResults = false
-    rec.onresult = (e: SpeechResultEvent) => { const t = e.results[0][0].transcript; setListening(false); send(t) }
+    rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = true
+    // Stream the transcript into the box LIVE so Kaleb can review/fix it before
+    // sending, instead of auto-sending a mis-heard phrase.
+    let finalText = ''
+    rec.onresult = (e: SpeechResultEvent) => {
+      let interim = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i]
+        if (r.isFinal) finalText += r[0].transcript
+        else interim += r[0].transcript
+      }
+      setInput((finalText + interim).replace(/\s+/g, ' ').trimStart())
+    }
     rec.onerror = () => setListening(false)
     rec.onend = () => setListening(false)
     recRef.current = rec; rec.start(); setListening(true)
@@ -164,7 +175,7 @@ export default function HomeChat() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-            placeholder={listening ? 'Listening…' : 'Talk or type… (or dictate with Wispr Flow)'}
+            placeholder={listening ? 'Listening… (review before sending)' : 'Type, or tap the mic on your keyboard to dictate'}
             rows={1}
             style={{ flex: 1, background: 'transparent', color: 'var(--foreground)', border: 'none', outline: 'none', resize: 'none', fontSize: 15, fontFamily: 'inherit', padding: '8px 4px', maxHeight: 140, lineHeight: 1.4 }}
           />
@@ -188,5 +199,5 @@ function iconBtn(active: boolean): React.CSSProperties {
 }
 
 // minimal Web Speech types
-interface SpeechRecog { lang: string; interimResults: boolean; start: () => void; stop: () => void; onresult: (e: SpeechResultEvent) => void; onerror: () => void; onend: () => void }
-interface SpeechResultEvent { results: { [i: number]: { [j: number]: { transcript: string } } } }
+interface SpeechRecog { lang: string; interimResults: boolean; continuous: boolean; start: () => void; stop: () => void; onresult: (e: SpeechResultEvent) => void; onerror: () => void; onend: () => void }
+interface SpeechResultEvent { resultIndex: number; results: { length: number; [i: number]: { isFinal: boolean; [j: number]: { transcript: string } } } }
