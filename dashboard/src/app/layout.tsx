@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import Sidebar from '@/components/Sidebar'
 import TabBar from '@/components/TabBar'
 import RegisterSW from '@/components/RegisterSW'
 import { supabase } from '@/lib/supabase'
@@ -27,12 +28,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" style={{ height: '100%' }}>
-      <body style={{ height: '100dvh', display: 'flex', flexDirection: 'column', margin: 0, padding: 0, overflow: 'hidden' }}>
+      <body style={{ height: '100dvh', display: 'flex', flexDirection: 'row', margin: 0, padding: 0, overflow: 'hidden' }}>
         <RegisterSW />
-        <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}>
-          {children}
-        </main>
-        <TabBar approvalCount={approvalCount ?? 0} taskCount={taskCount ?? 0} />
+        {/* Desktop: persistent left sidebar (hidden < 820px via CSS) */}
+        <Sidebar approvalCount={approvalCount ?? 0} taskCount={taskCount ?? 0} />
+        {/* Content column: scrollable page + (mobile) bottom tab bar */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100dvh' }}>
+          <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}>
+            {children}
+          </main>
+          {/* Mobile: iOS bottom tab bar (hidden >= 820px via CSS) */}
+          <TabBar approvalCount={approvalCount ?? 0} taskCount={taskCount ?? 0} />
+        </div>
       </body>
     </html>
   )
