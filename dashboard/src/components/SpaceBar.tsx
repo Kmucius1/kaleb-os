@@ -30,21 +30,21 @@ export default function SpaceBar({ current }: { current: Space }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10,
-      padding: '8px 14px calc(8px)', borderBottom: '1px solid var(--border)',
-      background: 'var(--background)', position: 'sticky', top: 0, zIndex: 50,
-    }} className="safe-top">
+      padding: '9px 14px', borderBottom: '1px solid var(--border)',
+      background: 'var(--background)', flexShrink: 0,
+    }}>
       <div style={{
-        display: 'inline-flex', background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: 11, padding: 3, gap: 2,
+        display: 'flex', flex: 1, maxWidth: 320, background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: 11, padding: 3, gap: 3,
       }}>
         {SPACES.map(s => {
           const Icon = s.icon
           const on = s.id === space
           return (
             <button key={s.id} onClick={() => choose(s.id)} style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '7px 14px', borderRadius: 9, border: 'none', cursor: 'pointer',
-              fontSize: 13, fontWeight: 700, letterSpacing: '0.01em',
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              padding: '8px 10px', borderRadius: 9, border: 'none', cursor: 'pointer',
+              fontSize: 13.5, fontWeight: 700, letterSpacing: '0.01em',
               background: on ? s.color : 'transparent',
               color: on ? '#fff' : 'var(--foreground-2)',
               transition: 'all 0.15s',
@@ -55,7 +55,7 @@ export default function SpaceBar({ current }: { current: Space }) {
           )
         })}
       </div>
-      <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+      <span className="hide-narrow" style={{ fontSize: 11.5, color: 'var(--muted)' }}>
         {active.id === 'dryp' ? 'The agency — clients & revenue' : 'You + your missions'}
       </span>
     </div>

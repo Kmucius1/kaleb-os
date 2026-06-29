@@ -144,6 +144,38 @@ a { color: inherit; text-decoration: none; }
 /* Large iOS-style page title row */
 .ios-largetitle { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
 
+/* ============================================================
+   MOBILE-FIRST UTILITIES (used across pages)
+   ============================================================ */
+/* Comfortable page padding on phones, roomier on desktop */
+.page-pad { padding: 18px 16px 28px; }
+@media (min-width: 820px) { .page-pad { padding: 28px 32px; } }
+
+/* Hide on narrow screens (e.g. secondary labels) */
+.hide-narrow { display: none; }
+@media (min-width: 560px) { .hide-narrow { display: inline; } }
+
+/* Responsive stat grid: 2-up on phones, auto on desktop — never overflows */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (min-width: 700px) { .stat-grid { grid-template-columns: repeat(4, 1fr); } }
+
+/* Card list (replaces tables on mobile): 1-up phone, 2-up desktop */
+.card-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+@media (min-width: 760px) { .card-list { grid-template-columns: repeat(2, 1fr); } }
+
+.list-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px 15px;
+}
+
 ::selection { background: var(--accent-dim); }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }

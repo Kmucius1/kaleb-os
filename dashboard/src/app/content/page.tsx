@@ -27,7 +27,7 @@ export default async function ContentOverview() {
     .filter(p => p.brand_id === id).reduce((s, p) => s + (p.leads ?? 0), 0)
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1200 }}>
+    <div className="page-pad" style={{ maxWidth: 1200, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, paddingBottom: 16, borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
         <Clapperboard size={16} color={meta.color} />
         <span style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: 16, letterSpacing: '0.06em' }}>CONTENT ENGINE</span>

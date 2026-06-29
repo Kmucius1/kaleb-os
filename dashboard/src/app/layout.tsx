@@ -35,8 +35,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <RegisterSW />
         {/* Desktop: persistent left sidebar (hidden < 820px via CSS) */}
         <Sidebar approvalCount={approvalCount ?? 0} taskCount={taskCount ?? 0} />
-        {/* Content column: space switch + scrollable page + (mobile) bottom tab bar */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100dvh' }}>
+        {/* Content column: space switch + scrollable page + (mobile) bottom tab bar.
+            paddingTop clears the iPhone status bar (translucent PWA status bar). */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100dvh', paddingTop: 'env(safe-area-inset-top)' }}>
           {/* Personal ⇄ DRYP switch (hidden on chat home + login) */}
           <SpaceBar current={space} />
           <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}>
