@@ -19,13 +19,13 @@ const money = (n: number) => '$' + Math.round(n).toLocaleString()
 const OPEN = (s: string) => !['won', 'lost', 'completed'].includes(s)
 
 export default async function BusinessPage() {
-  const [{ data: leads }, { data: accounts }, { data: brands }] = await Promise.all([
+  // All datasources concurrent (Ledger is a separate DB — don't wait on it serially).
+  const [{ data: leads }, { data: accounts }, { data: brands }, rev] = await Promise.all([
     supabaseDryp.from('leads').select('id,business_name,contact_name,stage,estimated_value,next_action,source').order('created_at', { ascending: false }),
     supabaseDryp.from('accounts').select('id,business_name,is_active,health_status,monthly_retainer,onboarding_status').order('business_name'),
     supabase.from('brands').select('crm_account_id,services').not('crm_account_id', 'is', null),
+    getRevenueSnapshot().catch(() => null as RevenueSnapshot | null),
   ])
-  let rev: RevenueSnapshot | null = null
-  try { rev = await getRevenueSnapshot() } catch { /* ledger optional */ }
 
   const allLeads = leads ?? []
   const openLeads = allLeads.filter(l => OPEN(l.stage))

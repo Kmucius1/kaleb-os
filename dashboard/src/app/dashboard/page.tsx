@@ -20,29 +20,38 @@ export default async function Dashboard() {
   const dateStr = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' }).format(now)
   const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(now) // YYYY-MM-DD
 
-  // ── KalebOS data ──
-  const [{ data: brands }, { data: ideas }, { count: scriptCount }, { data: journalToday }] = await Promise.all([
-    supabase.from('brands').select('id,slug,name,color'),
-    supabase.from('content_ideas').select('id,brand_id,title,angle,platform,status').in('status', ['idea', 'approved']).order('created_at', { ascending: false }).limit(8),
-    supabase.from('content_scripts').select('id', { count: 'exact', head: true }).in('status', ['draft', 'final']),
-    supabase.from('journal').select('id').eq('entry_date', todayStr).limit(1),
+  // Fire all three datasources (3 separate databases) concurrently. These used
+  // to run as sequential waterfalls — KalebOS, then DRYP CRM, then Ledger — which
+  // is what made the page slow. Now the render waits on the slowest one, not the sum.
+  const [kos, crm, rev] = await Promise.all([
+    Promise.all([
+      supabase.from('brands').select('id,slug,name,color'),
+      supabase.from('content_ideas').select('id,brand_id,title,angle,platform,status').in('status', ['idea', 'approved']).order('created_at', { ascending: false }).limit(8),
+      supabase.from('content_scripts').select('id', { count: 'exact', head: true }).in('status', ['draft', 'final']),
+      supabase.from('journal').select('id').eq('entry_date', todayStr).limit(1),
+      supabase.from('tasks').select('title,status').in('status', ['pending', 'in_progress']).limit(5),
+    ]),
+    (async () => {
+      try {
+        return await Promise.all([
+          supabaseDryp.from('accounts').select('business_name,is_active'),
+          supabaseDryp.from('leads').select('business_name,stage,created_at').order('created_at', { ascending: false }),
+        ])
+      } catch { return null }
+    })(),
+    getRevenueSnapshot().catch(() => null as RevenueSnapshot | null),
   ])
+
+  // ── KalebOS data ──
+  const [{ data: brands }, { data: ideas }, { count: scriptCount }, { data: journalToday }, { data: tasksData }] = kos
   const brandById = new Map((brands ?? []).map(b => [b.id, b]))
   const journaledToday = (journalToday ?? []).length > 0
-
-  let tasks: { title: string }[] = []
-  try {
-    const { data } = await supabase.from('tasks').select('title,status').in('status', ['pending', 'in_progress']).limit(5)
-    tasks = data ?? []
-  } catch { /* tasks table optional */ }
+  const tasks: { title: string }[] = tasksData ?? []
 
   // ── DRYP CRM ──
   let activeClients = 0, clientNames: string[] = [], newLeads = 0, recentLeads: { business_name: string }[] = []
-  try {
-    const [{ data: accts }, { data: leads }] = await Promise.all([
-      supabaseDryp.from('accounts').select('business_name,is_active'),
-      supabaseDryp.from('leads').select('business_name,stage,created_at').order('created_at', { ascending: false }),
-    ])
+  if (crm) {
+    const [{ data: accts }, { data: leads }] = crm
     const active = (accts ?? []).filter(a => a.is_active)
     activeClients = active.length
     clientNames = active.map(a => (a.business_name as string).trim()).slice(0, 4)
@@ -50,11 +59,7 @@ export default async function Dashboard() {
     const brandNew = open.filter(l => l.stage === 'not_started')
     newLeads = brandNew.length
     recentLeads = (brandNew.length ? brandNew : open).slice(0, 3)
-  } catch { /* CRM optional */ }
-
-  // ── DRYP Ledger ──
-  let rev: RevenueSnapshot | null = null
-  try { rev = await getRevenueSnapshot() } catch { /* ledger optional */ }
+  }
 
   const ideasReady = (ideas ?? []).length
 
