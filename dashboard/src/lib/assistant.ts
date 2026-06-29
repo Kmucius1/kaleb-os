@@ -30,6 +30,7 @@ export const TOOLS = [
   { type: "function", function: { name: "update_client", description: "Update a DRYP client by name: health, lead stage, and/or a note.", parameters: { type: "object", properties: { name: { type: "string" }, health: { type: "string" }, lead_stage: { type: "string" }, note: { type: "string" } }, required: ["name"] } } },
   { type: "function", function: { name: "remember", description: "Save a lasting fact about Kaleb (a preference, how he works, something he likes/dislikes, his goals) so you know him better over time.", parameters: { type: "object", properties: { fact: { type: "string" } }, required: ["fact"] } } },
   { type: "function", function: { name: "get_trading", description: "Kaleb's latest trading journal + psychology from TradePrint (readiness, discipline streak, reflections, rule violations). Use for trading-mindset/discipline questions.", parameters: { type: "object", properties: {} } } },
+  { type: "function", function: { name: "set_reminder", description: "Set a time-based reminder that pushes to Kaleb's phone. Provide minutes_from_now for relative times ('in 30 min', 'in 2 hours'), or due_at as an absolute ISO 8601 timestamp. Use add_task instead for untimed to-dos.", parameters: { type: "object", properties: { message: { type: "string" }, minutes_from_now: { type: "number" }, due_at: { type: "string" } }, required: ["message"] } } },
 ] as const;
 
 const money = (n: number) => "$" + Math.round(n).toLocaleString();
@@ -77,6 +78,15 @@ export async function execTool(name: string, args: Record<string, unknown>): Pro
     case "log_project": return await logProject({ name: String(args.name), note: String(args.note) });
     case "update_client": return await updateClient({ name: String(args.name), health: args.health as string, lead_stage: args.lead_stage as string, note: args.note as string });
     case "remember": return await remember({ fact: String(args.fact) });
+    case "set_reminder": {
+      const mins = typeof args.minutes_from_now === "number" ? args.minutes_from_now : null;
+      let dueAt: Date;
+      if (mins != null) dueAt = new Date(Date.now() + mins * 60000);
+      else if (args.due_at) { dueAt = new Date(String(args.due_at)); if (isNaN(dueAt.getTime())) return { error: "couldn't parse due_at" }; }
+      else return { error: "need minutes_from_now or due_at" };
+      const { error } = await supabase.from("reminders").insert({ message: String(args.message), due_at: dueAt.toISOString(), source: "atlas" });
+      return error ? { error: error.message } : { ok: true, due_at: dueAt.toISOString() };
+    }
     case "get_trading": {
       try { return await getTradingSnapshot(); }
       catch { return { error: "TradePrint not connected yet (needs its service key)." }; }

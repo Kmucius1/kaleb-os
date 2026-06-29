@@ -1,4 +1,5 @@
 import { Settings } from 'lucide-react'
+import NotificationsToggle from '@/components/NotificationsToggle'
 
 export default function SettingsPage() {
   const settings = [
@@ -22,10 +23,14 @@ export default function SettingsPage() {
   ]
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 800 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
-        <Settings size={16} color="var(--accent)" />
-        <span style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: 16, letterSpacing: '0.06em' }}>SETTINGS</span>
+    <div className="page-pad" style={{ maxWidth: 800, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
+        <Settings size={18} color="var(--accent)" />
+        <span style={{ color: 'var(--foreground)', fontWeight: 800, fontSize: 20, letterSpacing: '-0.01em' }}>Settings</span>
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <NotificationsToggle />
       </div>
 
       <div style={{ background: 'var(--surface)', border: '1px solid rgba(245,158,11,0.3)', borderLeft: '3px solid #f59e0b', borderRadius: 6, padding: '12px 16px', marginBottom: 24 }}>

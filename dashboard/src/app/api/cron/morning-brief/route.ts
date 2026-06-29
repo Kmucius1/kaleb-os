@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { chat, LLM_MODEL } from "@/lib/llm";
 import { sendTelegram } from "@/lib/telegram";
 import { syncClientBrands } from "@/lib/crm-sync";
+import { sendPushToAll, claimOnce } from "@/lib/push";
 
 // Vercel Cron hits this daily. Also runnable manually with the same bearer.
 export const dynamic = "force-dynamic";
@@ -81,6 +82,19 @@ export async function GET(request: Request) {
 
   let sent = false;
   try { await sendTelegram(msg); sent = true; } catch (e) { log.telegram_error = (e as Error).message; }
+
+  // Phone push (once per day) — the 8am brief lands on Kaleb's lock screen.
+  try {
+    if (await claimOnce("brief", "morning", "Morning brief")) {
+      const n = ideas.length;
+      const push = await sendPushToAll({
+        title: "☀️ Good morning, Kaleb",
+        body: n ? `${n} fresh content idea${n > 1 ? "s" : ""} + today's priorities are ready.` : "Today's priorities are ready.",
+        url: "/dashboard", tag: "brief",
+      });
+      log.push = push;
+    }
+  } catch (e) { log.push_error = (e as Error).message; }
 
   return Response.json({ ok: true, sent, ideas: ideas.length, log });
 }
