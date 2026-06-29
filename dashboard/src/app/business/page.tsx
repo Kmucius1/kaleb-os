@@ -97,7 +97,7 @@ async function PersonalBusiness() {
               <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--foreground)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(p.name || '—').trim()}</div>
               <FolderOpen size={15} color="#6366f1" style={{ flexShrink: 0 }} />
             </div>
-            {p.description && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 8 }}>{p.description}</div>}
+            {p.description && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.description}</div>}
           </div>
         ))}
         {openProjects.length === 0 && (
