@@ -19,12 +19,24 @@ export default function HomeChat() {
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [speak, setSpeak] = useState(false)
+  const [speak, setSpeak] = useState(true)          // voice ON by default
+  const [cost, setCost] = useState(0)               // running $ for this conversation
   const [listening, setListening] = useState(false)
   const scroller = useRef<HTMLDivElement>(null)
   const recRef = useRef<{ stop: () => void } | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Load saved voice preference (default ON).
+  useEffect(() => { if (localStorage.getItem('kos_speak') === '0') setSpeak(false) }, [])
+  function toggleSpeak() { setSpeak(s => { const n = !s; localStorage.setItem('kos_speak', n ? '1' : '0'); return n }) }
 
   useEffect(() => { scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' }) }, [messages, loading])
+
+  // Reuse one Audio element, primed on a user gesture, so iOS lets replies autoplay.
+  function primeAudio() {
+    if (audioRef.current) return
+    try { const a = new Audio(); a.play().catch(() => {}); audioRef.current = a } catch { /* ignore */ }
+  }
 
   async function say(text: string) {
     if (!speak) return
@@ -32,7 +44,9 @@ export default function HomeChat() {
       const res = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: forSpeech(text) }) })
       if (!res.ok) throw new Error('tts')
       const url = URL.createObjectURL(await res.blob())
-      const audio = new Audio(url)
+      const audio = audioRef.current ?? new Audio()
+      audioRef.current = audio
+      audio.src = url
       audio.onended = () => URL.revokeObjectURL(url)
       await audio.play()
     } catch {
@@ -47,6 +61,7 @@ export default function HomeChat() {
   async function send(text?: string) {
     const content = (text ?? input).trim()
     if (!content || loading) return
+    primeAudio()
     const next = [...messages, { role: 'user' as const, content }]
     setMessages(next); setInput(''); setLoading(true)
     try {
@@ -56,6 +71,7 @@ export default function HomeChat() {
       })
       const data = await res.json()
       const reply = data.reply || data.error || '…'
+      if (typeof data.cost === 'number') setCost(c => c + data.cost)
       setMessages([...next, { role: 'assistant', content: reply, actions: data.actions }])
       say(reply)
     } catch (e) {
@@ -84,8 +100,13 @@ export default function HomeChat() {
         </div>
         <span style={{ fontWeight: 700, fontSize: 15 }}>Atlas</span>
         <span style={{ fontSize: 10, color: 'var(--muted)', letterSpacing: '0.04em' }}>Kaleb OS</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-          <button onClick={() => setSpeak(s => !s)} title="Speak replies" style={iconBtn(speak)}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+          {cost > 0 && (
+            <span title="Cost of this conversation" className="tabular" style={{ fontSize: 11, color: 'var(--muted)', marginRight: 2 }}>
+              ${cost < 0.01 ? cost.toFixed(4) : cost.toFixed(3)}
+            </span>
+          )}
+          <button onClick={toggleSpeak} title="Speak replies" style={iconBtn(speak)}>
             {speak ? <Volume2 size={16} /> : <VolumeX size={16} />}
           </button>
           <Link href="/dashboard" title="Dashboard" style={{ ...iconBtn(false), textDecoration: 'none' }}><LayoutDashboard size={16} /></Link>

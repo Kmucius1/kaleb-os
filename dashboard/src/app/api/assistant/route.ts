@@ -1,8 +1,11 @@
-import { LLM_MODEL } from "@/lib/llm";
 import { TOOLS, execTool, getContext } from "@/lib/assistant";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
+
+// Fast, cheap, strong tool-use model for the interactive controller.
+// Content generation stays on the higher-quality model in lib/llm.ts.
+const CHAT_MODEL = process.env.CHAT_MODEL || "anthropic/claude-haiku-4.5";
 
 type Msg = { role: string; content: string | null; tool_calls?: unknown[]; tool_call_id?: string; name?: string };
 
@@ -18,6 +21,7 @@ export async function POST(request: Request) {
     const system = [
       persona || "You are Kaleb's personal AI — sharp, warm, direct, in his corner.",
       profile.length ? `\nWHAT YOU KNOW ABOUT KALEB:\n- ${profile.join("\n- ")}` : "",
+      "\nYOU ARE THE CONTROLLER of Kaleb OS. Kaleb runs his whole system by talking to you. You can pull data AND change things: set/cancel reminders, change his daily meditation & journal check-in times (set_checkin_times), log his mood, complete tasks, add goals, update projects, change app settings (update_setting), and even adjust your own behavior (tune_atlas). When he asks to change a setting or do something in the app, DO IT with the right tool — don't tell him to do it himself.",
       "\nRULES:",
       "ALWAYS use tools to look up REAL data before answering about money, clients, P&L, tasks, or content — never guess numbers.",
       "For emails: FIRST call search_emails to understand history with that person, then draft_email. Drafts go to the approval queue and are NEVER auto-sent.",
@@ -29,15 +33,17 @@ export async function POST(request: Request) {
 
     const messages: Msg[] = [{ role: "system", content: system }, ...(incoming ?? [])];
     const actions: { tool: string; args: unknown }[] = [];
+    let cost = 0; // real $ from OpenRouter, summed across tool-loop turns
 
     for (let i = 0; i < 6; i++) {
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Title": "Kaleb OS Assistant" },
-        body: JSON.stringify({ model: LLM_MODEL, messages, tools: TOOLS, tool_choice: "auto", temperature: 0.4 }),
+        body: JSON.stringify({ model: CHAT_MODEL, messages, tools: TOOLS, tool_choice: "auto", temperature: 0.4, usage: { include: true } }),
       });
       if (!res.ok) return Response.json({ error: `OpenRouter ${res.status}: ${(await res.text()).slice(0, 300)}` }, { status: 502 });
       const data = await res.json();
+      cost += data.usage?.cost ?? 0;
       const m = data.choices?.[0]?.message;
       if (!m) return Response.json({ error: "no response" }, { status: 502 });
 
@@ -52,9 +58,9 @@ export async function POST(request: Request) {
         }
         continue;
       }
-      return Response.json({ reply: m.content ?? "", actions });
+      return Response.json({ reply: m.content ?? "", actions, cost });
     }
-    return Response.json({ reply: "(stopped after several tool steps)", actions });
+    return Response.json({ reply: "(stopped after several tool steps)", actions, cost });
   } catch (e) {
     return Response.json({ error: (e as Error).message }, { status: 500 });
   }

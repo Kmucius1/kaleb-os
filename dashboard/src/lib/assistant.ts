@@ -9,7 +9,7 @@ import { getTradingSnapshot } from "./tradeprint";
 export async function getContext(): Promise<{ persona: string; profile: string[] }> {
   const [{ data: cfg }, { data: mems }] = await Promise.all([
     supabase.from("kalebos_config").select("value").eq("key", "persona").maybeSingle(),
-    supabase.from("memories").select("content").contains("tags", ["about-kaleb"]).limit(40),
+    supabase.from("memories").select("content").contains("tags", ["about-kaleb"]).order("priority", { ascending: false }).limit(12),
   ]);
   return { persona: cfg?.value ?? "", profile: (mems ?? []).map(m => m.content as string) };
 }
@@ -31,6 +31,13 @@ export const TOOLS = [
   { type: "function", function: { name: "remember", description: "Save a lasting fact about Kaleb (a preference, how he works, something he likes/dislikes, his goals) so you know him better over time.", parameters: { type: "object", properties: { fact: { type: "string" } }, required: ["fact"] } } },
   { type: "function", function: { name: "get_trading", description: "Kaleb's latest trading journal + psychology from TradePrint (readiness, discipline streak, reflections, rule violations). Use for trading-mindset/discipline questions.", parameters: { type: "object", properties: {} } } },
   { type: "function", function: { name: "set_reminder", description: "Set a time-based reminder that pushes to Kaleb's phone. Provide minutes_from_now for relative times ('in 30 min', 'in 2 hours'), or due_at as an absolute ISO 8601 timestamp. Use add_task instead for untimed to-dos.", parameters: { type: "object", properties: { message: { type: "string" }, minutes_from_now: { type: "number" }, due_at: { type: "string" } }, required: ["message"] } } },
+  { type: "function", function: { name: "log_mood", description: "Record how Kaleb is feeling right now (mindset tracking). mood like great|good|ok|low|stressed|tired; score 1-5.", parameters: { type: "object", properties: { mood: { type: "string" }, score: { type: "number" }, note: { type: "string" }, context: { type: "string" } }, required: ["mood"] } } },
+  { type: "function", function: { name: "set_checkin_times", description: "Change Kaleb's daily notification times. kind='meditation' or 'journal'. times = array of 'HH:MM' (24h, ET). Replaces that kind's whole schedule.", parameters: { type: "object", properties: { kind: { type: "string", enum: ["meditation", "journal"] }, times: { type: "array", items: { type: "string" } } }, required: ["kind", "times"] } } },
+  { type: "function", function: { name: "complete_task", description: "Mark a task done (matches by title). status defaults to completed; can also be 'cancelled' or 'in_progress'.", parameters: { type: "object", properties: { title: { type: "string" }, status: { type: "string", enum: ["completed", "cancelled", "in_progress"] } }, required: ["title"] } } },
+  { type: "function", function: { name: "add_goal", description: "Create a goal.", parameters: { type: "object", properties: { title: { type: "string" }, target_date: { type: "string" } }, required: ["title"] } } },
+  { type: "function", function: { name: "update_project_status", description: "Set a project's status (matches by name).", parameters: { type: "object", properties: { name: { type: "string" }, status: { type: "string", enum: ["active", "completed", "paused"] } }, required: ["name", "status"] } } },
+  { type: "function", function: { name: "tune_atlas", description: "Adjust how YOU (Atlas) behave going forward per Kaleb's instruction (e.g. 'be more concise', 'call me bro less'). Persists to your persona.", parameters: { type: "object", properties: { change: { type: "string" } }, required: ["change"] } } },
+  { type: "function", function: { name: "update_setting", description: "Set any app config key/value (kalebos_config). Use for misc settings Kaleb asks to change.", parameters: { type: "object", properties: { key: { type: "string" }, value: { type: "string" } }, required: ["key", "value"] } } },
 ] as const;
 
 const money = (n: number) => "$" + Math.round(n).toLocaleString();
@@ -86,6 +93,56 @@ export async function execTool(name: string, args: Record<string, unknown>): Pro
       else return { error: "need minutes_from_now or due_at" };
       const { error } = await supabase.from("reminders").insert({ message: String(args.message), due_at: dueAt.toISOString(), source: "atlas" });
       return error ? { error: error.message } : { ok: true, due_at: dueAt.toISOString() };
+    }
+    case "log_mood": {
+      const { error } = await supabase.from("mood_checkins").insert({
+        mood: String(args.mood), score: typeof args.score === "number" ? args.score : null,
+        note: args.note as string ?? null, context: args.context as string ?? null, source: "atlas",
+      });
+      return error ? { error: error.message } : { ok: true };
+    }
+    case "set_checkin_times": {
+      const kind = String(args.kind);
+      const times = (args.times as string[] ?? []).filter(t => /^\d{1,2}:\d{2}$/.test(t));
+      if (!times.length) return { error: "no valid HH:MM times" };
+      await supabase.from("notification_schedule").delete().eq("kind", kind);
+      const isMed = kind === "meditation";
+      const rows = times.map(t => ({
+        kind, time_et: t, label: `${kind} ${t}`,
+        title: isMed ? "🧘 Meditate" : "📝 How are you feeling?",
+        body: isMed ? "Take a few minutes to sit and breathe." : "Quick check-in — log your mindset right now.",
+        deep_link: isMed ? "/dashboard" : "/feeling", active: true,
+      }));
+      const { error } = await supabase.from("notification_schedule").insert(rows);
+      return error ? { error: error.message } : { ok: true, kind, times };
+    }
+    case "complete_task": {
+      const status = (args.status as string) || "completed";
+      const { data, error } = await supabase.from("tasks").update({ status })
+        .ilike("title", `%${String(args.title)}%`).select("id,title");
+      return error ? { error: error.message } : { ok: true, updated: data?.length ?? 0, status };
+    }
+    case "add_goal": {
+      const { error } = await supabase.from("goals").insert({
+        title: String(args.title), status: "active", priority: 3,
+        target_date: args.target_date ? String(args.target_date) : null,
+      });
+      return error ? { error: error.message } : { ok: true };
+    }
+    case "update_project_status": {
+      const { data, error } = await supabase.from("projects").update({ status: String(args.status) })
+        .ilike("name", `%${String(args.name)}%`).select("id,name");
+      return error ? { error: error.message } : { ok: true, updated: data?.length ?? 0 };
+    }
+    case "tune_atlas": {
+      const { data: cfg } = await supabase.from("kalebos_config").select("value").eq("key", "persona").maybeSingle();
+      const next = `${cfg?.value ?? ""}\n\n[Kaleb's tuning]: ${String(args.change)}`.trim();
+      const { error } = await supabase.from("kalebos_config").upsert({ key: "persona", value: next }, { onConflict: "key" });
+      return error ? { error: error.message } : { ok: true };
+    }
+    case "update_setting": {
+      const { error } = await supabase.from("kalebos_config").upsert({ key: String(args.key), value: String(args.value) }, { onConflict: "key" });
+      return error ? { error: error.message } : { ok: true };
     }
     case "get_trading": {
       try { return await getTradingSnapshot(); }
