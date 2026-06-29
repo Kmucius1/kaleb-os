@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
-import Sidebar from '@/components/Sidebar'
+import TabBar from '@/components/TabBar'
 import RegisterSW from '@/components/RegisterSW'
 import { supabase } from '@/lib/supabase'
 
@@ -27,12 +27,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" style={{ height: '100%' }}>
-      <body style={{ minHeight: '100dvh', display: 'flex', margin: 0, padding: 0 }}>
+      <body style={{ height: '100dvh', display: 'flex', flexDirection: 'column', margin: 0, padding: 0, overflow: 'hidden' }}>
         <RegisterSW />
-        <Sidebar approvalCount={approvalCount ?? 0} taskCount={taskCount ?? 0} />
-        <main style={{ flex: 1, overflowY: 'auto', minWidth: 0, height: '100dvh' }}>
+        <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}>
           {children}
         </main>
+        <TabBar approvalCount={approvalCount ?? 0} taskCount={taskCount ?? 0} />
       </body>
     </html>
   )

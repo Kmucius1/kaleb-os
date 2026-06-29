@@ -35,20 +35,30 @@
   --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html { -webkit-text-size-adjust: 100%; }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: 15px;
+  line-height: 1.5;
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   margin: 0;
   padding: 0;
+  overscroll-behavior-y: none;
 }
+
+/* iOS-style momentum scrolling for any scroll container */
+main, .scroll { -webkit-overflow-scrolling: touch; }
+
+/* Safe-area helpers (notch / home indicator) */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
 /* Tabular numbers (clocks, stats) stay crisp/aligned */
 .mono, .tabular { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
@@ -57,18 +67,71 @@ a { color: inherit; text-decoration: none; }
 
 .row-hover:hover { background: var(--surface-2); }
 
-/* Mobile: sidebar becomes a slide-over with a hamburger */
-.kos-hamburger { display: none; }
-@media (max-width: 820px) {
-  .kos-sidebar {
-    position: fixed !important; top: 0; left: 0;
-    transform: translateX(-100%); transition: transform 0.22s ease;
-    z-index: 200; height: 100dvh !important;
-  }
-  .kos-sidebar.kos-open { transform: translateX(0); box-shadow: 0 0 40px rgba(0,0,0,0.6); }
-  .kos-hamburger { display: flex !important; }
-  .kos-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 150; }
+/* ============================================================
+   iOS APP SHELL — bottom tab bar + springboard (CarPlay-style)
+   ============================================================ */
+
+/* Frosted-glass bottom tab bar */
+.ios-tabbar {
+  position: sticky; bottom: 0; z-index: 100;
+  display: flex; align-items: stretch; justify-content: space-around;
+  background: rgba(13, 15, 22, 0.78);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
 }
+.ios-tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; padding: 8px 0 6px; min-height: 52px;
+  color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 0.01em;
+  position: relative; cursor: pointer; user-select: none;
+  transition: color 0.15s, transform 0.1s;
+}
+.ios-tab:active { transform: scale(0.92); }
+.ios-tab.active { color: var(--accent); }
+.ios-tab-badge {
+  position: absolute; top: 4px; left: 50%; margin-left: 6px;
+  background: var(--red); color: #fff; font-size: 9px; font-weight: 800;
+  min-width: 16px; height: 16px; line-height: 16px; text-align: center;
+  border-radius: 9px; padding: 0 4px; box-shadow: 0 0 0 2px var(--background);
+}
+
+/* Springboard grid of app icons */
+.springboard {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px 8px;
+}
+@media (min-width: 560px) { .springboard { grid-template-columns: repeat(6, 1fr); } }
+@media (min-width: 900px) { .springboard { grid-template-columns: repeat(8, 1fr); } }
+
+.app-icon {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  padding: 8px 2px; text-align: center; cursor: pointer;
+  transition: transform 0.1s;
+}
+.app-icon:active { transform: scale(0.9); }
+.app-tile {
+  position: relative;
+  width: 60px; height: 60px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.app-label {
+  font-size: 11px; font-weight: 500; color: var(--foreground-2);
+  line-height: 1.2; max-width: 72px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.app-tile-badge {
+  position: absolute; top: -5px; right: -5px;
+  background: var(--red); color: #fff; font-size: 10px; font-weight: 800;
+  min-width: 19px; height: 19px; line-height: 19px; text-align: center;
+  border-radius: 10px; padding: 0 5px; box-shadow: 0 0 0 2px var(--background);
+}
+
+/* Large iOS-style page title row */
+.ios-largetitle { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
 
 ::selection { background: var(--accent-dim); }
 

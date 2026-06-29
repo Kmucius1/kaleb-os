@@ -77,7 +77,7 @@ export default function HomeChat() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxWidth: 780, margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', maxWidth: 780, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
         <div style={{ width: 26, height: 26, borderRadius: 8, background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Sparkles size={14} color="#0a0b0f" />
@@ -125,7 +125,7 @@ export default function HomeChat() {
         {loading && <div style={{ alignSelf: 'flex-start', color: 'var(--muted)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}><Loader2 size={14} className="spin" /> thinking…</div>}
       </div>
 
-      <div style={{ padding: '12px 16px calc(12px + env(safe-area-inset-bottom))', borderTop: '1px solid var(--border)' }}>
+      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 14, padding: 6 }}>
           <button onClick={toggleMic} title="Talk" style={{ ...iconBtn(listening), width: 38, height: 38, flexShrink: 0 }}>
             <Mic size={18} />
