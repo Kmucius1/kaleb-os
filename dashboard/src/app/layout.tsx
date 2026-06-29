@@ -2,8 +2,10 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import Sidebar from '@/components/Sidebar'
 import TabBar from '@/components/TabBar'
+import SpaceBar from '@/components/SpaceBar'
 import RegisterSW from '@/components/RegisterSW'
 import { supabase } from '@/lib/supabase'
+import { getSpace } from '@/lib/space'
 
 export const metadata: Metadata = {
   title: 'Kaleb OS',
@@ -21,9 +23,10 @@ export const viewport: Viewport = {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [{ count: approvalCount }, { count: taskCount }] = await Promise.all([
+  const [{ count: approvalCount }, { count: taskCount }, space] = await Promise.all([
     supabase.from('agent_actions').select('*', { count: 'exact', head: true }).eq('status', 'pending_approval'),
     supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+    getSpace(),
   ])
 
   return (
@@ -32,8 +35,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <RegisterSW />
         {/* Desktop: persistent left sidebar (hidden < 820px via CSS) */}
         <Sidebar approvalCount={approvalCount ?? 0} taskCount={taskCount ?? 0} />
-        {/* Content column: scrollable page + (mobile) bottom tab bar */}
+        {/* Content column: space switch + scrollable page + (mobile) bottom tab bar */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100dvh' }}>
+          {/* Personal ⇄ DRYP switch (hidden on chat home + login) */}
+          <SpaceBar current={space} />
           <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}>
             {children}
           </main>
