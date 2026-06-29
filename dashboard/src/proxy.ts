@@ -9,10 +9,12 @@ export function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
   // Always allow: login screen + API, cron (self-auths with CRON_SECRET), MCP (self-auths with MCP_SECRET),
+  // ingest (self-auths with INGEST_SECRET — the PLAUD auto-pipe posts here headlessly),
   // and public PWA assets (manifest/sw/icons) so the app can install + show its icon.
   if (
     pathname === '/login' || pathname === '/api/login' ||
     pathname.startsWith('/api/cron/') ||
+    pathname.startsWith('/api/ingest/') ||
     pathname === '/api/mcp' || pathname === '/api/sse' || pathname === '/api/message' ||
     pathname === '/manifest.webmanifest' || pathname === '/sw.js' ||
     pathname === '/apple-touch-icon.png' || pathname.startsWith('/icon')
