@@ -32,10 +32,18 @@ export default function HomeChat() {
 
   useEffect(() => { scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' }) }, [messages, loading])
 
-  // Reuse one Audio element, primed on a user gesture, so iOS lets replies autoplay.
+  // Reuse one Audio element, unlocked on a user gesture, so iOS lets replies
+  // autoplay later — including replies to VOICE input, where say() runs outside
+  // a gesture. Playing a tiny silent clip inside the gesture unlocks the element.
+  const SILENT = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
   function primeAudio() {
-    if (audioRef.current) return
-    try { const a = new Audio(); a.play().catch(() => {}); audioRef.current = a } catch { /* ignore */ }
+    try {
+      if (!audioRef.current) audioRef.current = new Audio()
+      const a = audioRef.current
+      if (a.dataset.unlocked) return
+      a.src = SILENT
+      a.play().then(() => { a.dataset.unlocked = '1' }).catch(() => {})
+    } catch { /* ignore */ }
   }
 
   async function say(text: string) {
@@ -80,6 +88,7 @@ export default function HomeChat() {
   }
 
   function toggleMic() {
+    primeAudio() // unlock the speaker now (real tap) so the spoken reply can autoplay
     if (listening) { recRef.current?.stop(); setListening(false); return }
     const w = window as unknown as { SpeechRecognition?: new () => SpeechRecog; webkitSpeechRecognition?: new () => SpeechRecog }
     const SR = w.SpeechRecognition || w.webkitSpeechRecognition

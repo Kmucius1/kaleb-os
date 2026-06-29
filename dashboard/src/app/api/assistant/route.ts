@@ -4,8 +4,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 // Fast, cheap, strong tool-use model for the interactive controller.
+// Gemini 2.5 Flash: ~40x cheaper than Haiku, faster, solid tool-calling.
 // Content generation stays on the higher-quality model in lib/llm.ts.
-const CHAT_MODEL = process.env.CHAT_MODEL || "anthropic/claude-haiku-4.5";
+const CHAT_MODEL = process.env.CHAT_MODEL || "google/gemini-2.5-flash";
 
 type Msg = { role: string; content: string | null; tool_calls?: unknown[]; tool_call_id?: string; name?: string };
 
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
     const { persona, profile } = await getContext();
     const system = [
       persona || "You are Kaleb's personal AI — sharp, warm, direct, in his corner.",
+      "\nThe user is KALEB (Kaleb Mucius). Always address him as Kaleb. Never question, correct, or second-guess his name.",
       profile.length ? `\nWHAT YOU KNOW ABOUT KALEB:\n- ${profile.join("\n- ")}` : "",
       "\nYOU ARE THE CONTROLLER of Kaleb OS. Kaleb runs his whole system by talking to you. You can pull data AND change things: set/cancel reminders, change his daily meditation & journal check-in times (set_checkin_times), log his mood, complete tasks, add goals, update projects, change app settings (update_setting), and even adjust your own behavior (tune_atlas). When he asks to change a setting or do something in the app, DO IT with the right tool — don't tell him to do it himself.",
       "\nRULES:",
