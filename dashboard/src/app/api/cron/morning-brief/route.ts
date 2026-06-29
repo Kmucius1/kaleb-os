@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabase";
 import { chat, LLM_MODEL } from "@/lib/llm";
-import { sendTelegram } from "@/lib/telegram";
 import { syncClientBrands } from "@/lib/crm-sync";
 import { sendPushToAll, claimOnce } from "@/lib/push";
 
@@ -68,22 +67,8 @@ export async function GET(request: Request) {
     if (rows.length) { try { await supabase.from("content_ideas").insert(rows); } catch (e) { log.save_error = (e as Error).message; } }
   }
 
-  // 5. Compose + send the Telegram brief.
-  const clientCount = (log.crm as { total_clients?: number })?.total_clients;
-  let msg = `☀️ *Kaleb OS — Morning Brief*\n_${today}_\n\n*Today's content ideas:*\n`;
-  for (const b of BRANDS) {
-    const mine = ideas.filter(i => i.brand_slug === b.slug);
-    if (!mine.length) continue;
-    msg += `\n${b.emoji} *${b.label}*\n`;
-    for (const i of mine) msg += `• ${i.hook}${i.why_now ? `  _(${i.why_now})_` : ""}\n`;
-  }
-  if (typeof clientCount === "number") msg += `\n📊 Clients synced from CRM: *${clientCount}*\n`;
-  msg += `\n→ Open: https://kalebos.vercel.app/content`;
-
-  let sent = false;
-  try { await sendTelegram(msg); sent = true; } catch (e) { log.telegram_error = (e as Error).message; }
-
-  // Phone push (once per day) — the 8am brief lands on Kaleb's lock screen.
+  // 5. Phone push (once per day) — the morning brief lands on Kaleb's lock screen.
+  //    (Delivery is push + the saved ideas on /content — the old Telegram path is gone.)
   try {
     if (await claimOnce("brief", "morning", "Morning brief")) {
       const n = ideas.length;
@@ -96,5 +81,5 @@ export async function GET(request: Request) {
     }
   } catch (e) { log.push_error = (e as Error).message; }
 
-  return Response.json({ ok: true, sent, ideas: ideas.length, log });
+  return Response.json({ ok: true, ideas: ideas.length, log });
 }
