@@ -69,16 +69,16 @@ export default async function Dashboard() {
   for (const t of tasks) items.push({ label: t.title, icon: ListChecks })
 
   return (
-    <div style={{ padding: '32px 36px', maxWidth: 1180, margin: '0 auto' }}>
+    <div className="page-pad" style={{ maxWidth: 1180, margin: '0 auto' }}>
       {/* Greeting */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <Sunrise size={22} color="var(--accent)" />
-        <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>{greeting}, Kaleb</h1>
+        <h1 style={{ fontSize: 25, fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>{greeting}, Kaleb</h1>
       </div>
-      <div style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 28 }}>{dateStr} · here&apos;s what matters today.</div>
+      <div style={{ color: 'var(--muted)', fontSize: 13.5, marginBottom: 22 }}>{dateStr} · here&apos;s what matters today.</div>
 
       {/* Row 1: Today + Rituals */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="dash-row two">
         <Card title="TODAY" accent="var(--accent)">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {items.map((it, i) => {
@@ -106,7 +106,7 @@ export default async function Dashboard() {
       </div>
 
       {/* Row 2: Content / Clients / Revenue */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      <div className="dash-row three">
         {/* Content */}
         <Card title="CONTENT READY" accent="#34d399" href="/content">
           {ideasReady === 0 && <Empty>No ideas queued — generate some.</Empty>}

@@ -176,6 +176,13 @@ a { color: inherit; text-decoration: none; }
   border-radius: 14px; padding: 14px 15px;
 }
 
+/* Responsive dashboard rows: single column on phones, multi on desktop */
+.dash-row { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px; }
+@media (min-width: 820px) {
+  .dash-row.two { grid-template-columns: 1.4fr 1fr; gap: 16px; }
+  .dash-row.three { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+}
+
 ::selection { background: var(--accent-dim); }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }

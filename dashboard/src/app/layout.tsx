@@ -40,7 +40,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100dvh', paddingTop: 'env(safe-area-inset-top)' }}>
           {/* Personal ⇄ DRYP switch (hidden on chat home + login) */}
           <SpaceBar current={space} />
-          <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}>
+          <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
             {children}
           </main>
           {/* Mobile: iOS bottom tab bar (hidden >= 820px via CSS) */}
