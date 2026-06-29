@@ -183,6 +183,52 @@ a { color: inherit; text-decoration: none; }
   .dash-row.three { grid-template-columns: repeat(3, 1fr); gap: 16px; }
 }
 
+/* ============================================================
+   GLOBAL MOBILE SAFETY NET (<820px)
+   The app is heavily inline-styled, so these use !important to beat
+   inline styles. Reflows desktop tables into stacked cards and
+   collapses wide multi-column grids — so no page clips or overflows.
+   ============================================================ */
+@media (max-width: 819px) {
+  /* Tables -> stacked cards */
+  main table { display: block !important; width: 100% !important; border-collapse: separate !important; }
+  main thead { display: none !important; }
+  main tbody { display: block !important; }
+  main tr {
+    display: block !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 14px !important;
+    padding: 6px 14px !important;
+    margin-bottom: 10px !important;
+  }
+  main td {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+    text-overflow: clip !important;
+    overflow: visible !important;
+    padding: 6px 0 !important;
+    text-align: left !important;
+    align-items: center !important;
+  }
+  main td > div {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: 100% !important;
+  }
+
+  /* Collapse wide fixed grids (3+ columns) to single column */
+  main div[style*="repeat(3,"],
+  main div[style*="repeat(4,"],
+  main div[style*="repeat(5,"],
+  main div[style*="repeat(6,"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 ::selection { background: var(--accent-dim); }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
