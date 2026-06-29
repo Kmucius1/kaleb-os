@@ -56,14 +56,14 @@ export default async function GoalsPage() {
           marginBottom: 32,
         }}>
           <div style={{ color: 'var(--muted)', fontSize: 10, letterSpacing: '0.08em', marginBottom: 8 }}>
-            PHASE 5 — NOT YET ACTIVE
+            NO GOALS YET
           </div>
           <div style={{ fontSize: 12, color: 'var(--foreground)', lineHeight: 1.7, marginBottom: 12 }}>
-            Phase 5 activates goals tracking, weekly accountability challenges, and execution audits.
-            Once Phase 4 (memory layer) is stable, tell Hermes to set up your goals in Telegram.
+            Track goals, weekly accountability challenges, and execution audits here.
+            Set them up by asking Atlas.
           </div>
           <div style={{ fontSize: 10, color: '#333', fontStyle: 'italic' }}>
-            Tell Hermes: "set up my six priorities as goals in the database"
+            Ask Atlas: "set up my six priorities as goals"
           </div>
         </div>
       )}

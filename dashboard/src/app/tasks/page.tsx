@@ -71,7 +71,7 @@ export default async function TasksPage() {
         }}>
           <div style={{ marginBottom: 8 }}>— no tasks yet —</div>
           <div style={{ fontSize: 10, color: '#333' }}>
-            Tell Hermes: "process my captures and create tasks from anything actionable"
+            Ask Atlas: "process my captures and create tasks from anything actionable"
           </div>
         </div>
       ) : (

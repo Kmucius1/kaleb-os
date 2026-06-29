@@ -49,7 +49,7 @@ const buildNav = (approvalCount: number, taskCount: number): NavSection[] => [
   {
     title: 'PERFORMANCE',
     items: [
-      { href: '/business', label: 'DRYP', icon: Briefcase },
+      { href: '/business', label: 'Business', icon: Briefcase },
       { href: '/trading', label: 'Trading', icon: BarChart2 },
       { href: '/side-hustles', label: 'Side Hustles', icon: Wallet },
       { href: '/weekly-reviews', label: 'Weekly Reviews', icon: Calendar },

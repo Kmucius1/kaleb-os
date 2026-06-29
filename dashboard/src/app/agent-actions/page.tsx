@@ -37,7 +37,7 @@ export default async function AgentActionsPage() {
 
       {all.length === 0 ? (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '48px', textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>
-          — no agent actions yet — Hermes logs all actions here
+          — no agent actions yet — Atlas logs all actions here
         </div>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>

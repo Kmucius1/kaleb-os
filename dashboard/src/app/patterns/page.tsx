@@ -21,7 +21,7 @@ export default async function PatternsPage() {
           <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', marginBottom: 12 }}>PATTERNS ({(patterns ?? []).length})</div>
           {(patterns ?? []).length === 0 ? (
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>
-              — no patterns yet — Hermes will identify these over time
+              — no patterns yet — Atlas will identify these over time
             </div>
           ) : (
             (patterns ?? []).map((p: any) => (

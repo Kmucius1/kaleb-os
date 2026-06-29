@@ -60,7 +60,7 @@ export default async function MemoryPage() {
         }}>
           <div style={{ marginBottom: 8 }}>— no memories extracted yet —</div>
           <div style={{ fontSize: 10, color: '#333' }}>
-            Tell Hermes: "process my captures and extract key facts into memory"
+            Ask Atlas: "process my captures and extract key facts into memory"
           </div>
         </div>
       ) : (

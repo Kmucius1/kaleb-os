@@ -177,7 +177,7 @@ export default function ActionQueueTabs({
                 <div style={{ fontSize: 11, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {a.description}
                 </div>
-                <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 3 }}>Approve via Telegram</div>
+                <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 3 }}>Approve in the app</div>
               </div>
             ))
           )}

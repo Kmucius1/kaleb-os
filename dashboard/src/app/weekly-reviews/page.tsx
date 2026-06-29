@@ -21,13 +21,12 @@ export default async function WeeklyReviewsPage() {
       </div>
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: '3px solid #222', borderRadius: 6, padding: '20px 24px', marginBottom: 24 }}>
-        <div style={{ fontSize: 10, color: 'var(--muted)', letterSpacing: '0.08em', marginBottom: 8 }}>PHASE 5 — WEEKLY ACCOUNTABILITY</div>
+        <div style={{ fontSize: 10, color: 'var(--muted)', letterSpacing: '0.08em', marginBottom: 8 }}>WEEKLY ACCOUNTABILITY</div>
         <div style={{ fontSize: 12, color: 'var(--foreground)', lineHeight: 1.7 }}>
-          Weekly reviews activate in Phase 5. Hermes will prompt you every Sunday for reflection,
-          track execution vs. commitments, and surface accountability data here.
+          Capture weekly reflections, track execution vs. commitments, and surface accountability data here.
         </div>
         <div style={{ marginTop: 10, fontSize: 10, color: '#333' }}>
-          Activate by telling Hermes: "set up my weekly review cadence — prompt me every Sunday at 7pm"
+          Get started by asking Atlas: "set up my weekly review cadence"
         </div>
       </div>
 

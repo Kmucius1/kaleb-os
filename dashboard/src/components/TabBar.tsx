@@ -22,7 +22,7 @@ export default function TabBar({
     { href: '/dashboard', label: 'Today', icon: Home },
     { href: '/apps', label: 'Apps', icon: LayoutGrid, badge: approvalCount + taskCount },
     { href: '/content', label: 'Content', icon: Clapperboard },
-    { href: '/business', label: 'DRYP', icon: Briefcase },
+    { href: '/business', label: 'Business', icon: Briefcase },
   ]
 
   return (

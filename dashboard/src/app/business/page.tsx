@@ -1,8 +1,9 @@
 import { supabaseDryp } from '@/lib/supabaseDryp'
 import { supabase } from '@/lib/supabase'
 import { getRevenueSnapshot, type RevenueSnapshot } from '@/lib/ledger'
+import { getSpace } from '@/lib/space'
 import InlineSelect from '@/components/InlineSelect'
-import { Briefcase, ExternalLink } from 'lucide-react'
+import { Briefcase, ExternalLink, Rocket, FolderOpen } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,10 +16,103 @@ const STAGE_COLOR: Record<string, string> = {
 const HEALTH_COLOR: Record<string, string> = {
   excellent: '#34d399', good: '#34d399', new: '#60a5fa', at_risk: '#fbbf24', churning: '#f87171',
 }
+const ENDEAVOR_COLOR: Record<string, string> = {
+  active: '#34d399', paused: '#fbbf24', inactive: '#6b7280', idea: '#60a5fa',
+}
 const money = (n: number) => '$' + Math.round(n).toLocaleString()
 const OPEN = (s: string) => !['won', 'lost', 'completed'].includes(s)
 
+// One "Business" tab, two faces: Personal = Kaleb's own money-making endeavors;
+// DRYP = the agency's clients & pipeline. Driven by the global space switch.
 export default async function BusinessPage() {
+  const space = await getSpace()
+  return space === 'personal' ? <PersonalBusiness /> : <DrypBusiness />
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PERSONAL — what Kaleb himself is building & earning (outside the agency)
+async function PersonalBusiness() {
+  const [{ data: hustles }, { data: projects }] = await Promise.all([
+    supabase.from('side_hustles').select('id,name,category,description,revenue_mtd,revenue_total,status').order('revenue_mtd', { ascending: false }),
+    supabase.from('projects').select('id,name,description,status,priority').eq('status', 'active').order('priority', { ascending: false }),
+  ])
+  const all = hustles ?? []
+  const active = all.filter(h => h.status === 'active')
+  const totalMtd = all.reduce((s, h) => s + Number(h.revenue_mtd ?? 0), 0)
+  const totalAll = all.reduce((s, h) => s + Number(h.revenue_total ?? 0), 0)
+  const openProjects = projects ?? []
+
+  return (
+    <div className="page-pad" style={{ maxWidth: 1180, margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, paddingBottom: 14, borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+        <Rocket size={18} color="#6366f1" />
+        <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>Personal</span>
+        <span style={{ color: 'var(--muted)', fontSize: 12 }}>Your ventures &amp; income</span>
+      </div>
+
+      {/* Stats */}
+      <div className="stat-grid" style={{ margin: '0 0 26px' }}>
+        <StatCard label="INCOME / MO" value={totalMtd > 0 ? money(totalMtd) : '—'} accent="#34d399" sub="across endeavors" />
+        <StatCard label="ALL-TIME" value={totalAll > 0 ? money(totalAll) : '—'} accent="#a78bfa" sub="total earned" />
+        <StatCard label="ENDEAVORS" value={String(active.length || '—')} accent="#22d3ee" sub="earning now" />
+        <StatCard label="PROJECTS" value={String(openProjects.length || '—')} accent="#6366f1" sub="in motion" />
+      </div>
+
+      {/* ENDEAVORS — per income stream (mirrors DRYP's per-client view) */}
+      <SectionTitle>ENDEAVORS · {money(totalMtd)}/mo</SectionTitle>
+      <div className="card-list">
+        {all.map(h => (
+          <div key={h.id} className="list-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(h.name || '—').trim()}</div>
+                {h.category && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2, textTransform: 'capitalize' }}>{h.category}</div>}
+              </div>
+              <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                <div style={{ fontWeight: 800, fontSize: 16, color: '#34d399' }}>{h.revenue_mtd ? money(Number(h.revenue_mtd)) + '/mo' : '—'}</div>
+                {h.revenue_total ? <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>{money(Number(h.revenue_total))} all-time</div> : null}
+              </div>
+            </div>
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: ENDEAVOR_COLOR[h.status] ?? 'var(--muted)', background: `${ENDEAVOR_COLOR[h.status] ?? '#6b7280'}1f`, borderRadius: 6, padding: '3px 9px', textTransform: 'capitalize' }}>{h.status || 'active'}</span>
+              {h.description && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{h.description}</span>}
+            </div>
+          </div>
+        ))}
+        {all.length === 0 && (
+          <div className="list-card" style={{ color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.5 }}>
+            No income streams yet. Tell Atlas, e.g. <span style={{ color: 'var(--foreground-2)' }}>&ldquo;my trading made $2k this month&rdquo;</span> or <span style={{ color: 'var(--foreground-2)' }}>&ldquo;add an endeavor: Ka1eb.ai, $500/mo&rdquo;</span> and it&rsquo;ll show up here.
+          </div>
+        )}
+      </div>
+
+      {/* PROJECTS — the things he's actively building */}
+      <div style={{ height: 26 }} />
+      <SectionTitle>PROJECTS · {openProjects.length} in motion</SectionTitle>
+      <div className="card-list">
+        {openProjects.map(p => (
+          <div key={p.id} className="list-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--foreground)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(p.name || '—').trim()}</div>
+              <FolderOpen size={15} color="#6366f1" style={{ flexShrink: 0 }} />
+            </div>
+            {p.description && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 8 }}>{p.description}</div>}
+          </div>
+        ))}
+        {openProjects.length === 0 && (
+          <div className="list-card" style={{ color: 'var(--muted)', fontSize: 13.5 }}>
+            No active projects. Tell Atlas <span style={{ color: 'var(--foreground-2)' }}>&ldquo;create a project: [name]&rdquo;</span> to track what you&rsquo;re building.
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DRYP — the agency (unchanged)
+async function DrypBusiness() {
   // All datasources concurrent (Ledger is a separate DB — don't wait on it serially).
   const [{ data: leads }, { data: accounts }, { data: brands }, rev] = await Promise.all([
     supabaseDryp.from('leads').select('id,business_name,contact_name,stage,estimated_value,next_action,source').order('created_at', { ascending: false }),

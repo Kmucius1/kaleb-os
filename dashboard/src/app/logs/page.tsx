@@ -11,7 +11,7 @@ export default async function LogsPage() {
   ])
 
   const feed = [
-    ...(actions ?? []).map(a => ({ time: a.created_at, type: 'action', label: `[HERMES] ${a.action_type ?? 'action'}: ${a.description?.slice(0, 80) ?? ''}`, status: a.status })),
+    ...(actions ?? []).map(a => ({ time: a.created_at, type: 'action', label: `[ATLAS] ${a.action_type ?? 'action'}: ${a.description?.slice(0, 80) ?? ''}`, status: a.status })),
     ...(captures ?? []).map(c => ({ time: c.created_at, type: 'capture', label: `[CAPTURE] ${c.source}/${c.content_type} received${c.processed_at ? ' · processed' : ' · unprocessed'}`, status: c.processed_at ? 'processed' : 'pending' })),
   ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 80)
 

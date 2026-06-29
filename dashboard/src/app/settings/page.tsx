@@ -3,22 +3,21 @@ import NotificationsToggle from '@/components/NotificationsToggle'
 
 export default function SettingsPage() {
   const settings = [
-    { section: 'HERMES', items: [
-      { label: 'Agent Model', value: 'google/gemini-flash-2.0 (via OpenRouter)', editable: false },
-      { label: 'Agent Version', value: 'v0.12.0', editable: false },
-      { label: 'VPS', value: '178.156.185.104 · Hetzner CPX11 · Ashburn', editable: false },
+    { section: 'ATLAS', items: [
+      { label: 'Assistant', value: 'Atlas · in-app AI assistant', editable: false },
+      { label: 'Model', value: 'Claude (Anthropic)', editable: false },
     ]},
     { section: 'NOTIFICATIONS', items: [
       { label: 'Quiet Hours', value: '7am – 9pm ET', editable: true },
-      { label: 'Email Approval Rule', value: 'ALL emails require explicit Telegram approval', editable: false },
+      { label: 'Email Approval Rule', value: 'ALL emails require explicit in-app approval', editable: false },
     ]},
     { section: 'MEMORY', items: [
       { label: 'Memory TTL', value: '60 days (+ 30 on reference)', editable: false },
     ]},
     { section: 'INTEGRATIONS', items: [
       { label: 'Supabase Project', value: 'KalebOS · eafrjiqjelumqgoefbfd', editable: false },
-      { label: 'n8n', value: 'n8n.kalebos.app · 2 workflows active', editable: false },
-      { label: 'Telegram Bot', value: '@kaleb_hermes_bot', editable: false },
+      { label: 'Assistant', value: 'Atlas (in-app)', editable: false },
+      { label: 'Voice Capture', value: 'PLAUD', editable: false },
     ]},
   ]
 
@@ -33,9 +32,9 @@ export default function SettingsPage() {
         <NotificationsToggle />
       </div>
 
-      <div style={{ background: 'var(--surface)', border: '1px solid rgba(245,158,11,0.3)', borderLeft: '3px solid #f59e0b', borderRadius: 6, padding: '12px 16px', marginBottom: 24 }}>
-        <div style={{ fontSize: 10, color: '#f59e0b', marginBottom: 4 }}>⚠ Settings are managed via Hermes config files on the VPS.</div>
-        <div style={{ fontSize: 10, color: 'var(--muted)' }}>To change settings, SSH into 178.156.185.104 and edit ~/.hermes/config.yaml or tell Hermes via Telegram.</div>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: '3px solid var(--accent)', borderRadius: 6, padding: '12px 16px', marginBottom: 24 }}>
+        <div style={{ fontSize: 10, color: 'var(--accent)', marginBottom: 4 }}>Settings are managed by Atlas, your in-app assistant.</div>
+        <div style={{ fontSize: 10, color: 'var(--muted)' }}>To change a setting, just ask Atlas in the app (e.g. &ldquo;update my quiet hours to 8am–10pm&rdquo;), or edit it here in the dashboard.</div>
       </div>
 
       {settings.map(group => (

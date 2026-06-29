@@ -40,7 +40,7 @@ export default async function PersonalBrandPage() {
       {all.length === 0 ? (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>
           <div style={{ marginBottom: 8 }}>— no ideas captured yet —</div>
-          <div style={{ fontSize: 10, color: '#333' }}>Tell Hermes: "surface content ideas from my captures and voice notes"</div>
+          <div style={{ fontSize: 10, color: '#333' }}>Ask Atlas: "surface content ideas from my captures and voice notes"</div>
         </div>
       ) : (
         all.map((idea: any) => (

@@ -68,14 +68,14 @@ export default async function IdeasPage() {
           marginBottom: 32,
         }}>
           <div style={{ color: 'var(--muted)', fontSize: 10, letterSpacing: '0.08em', marginBottom: 8 }}>
-            PHASE 6 — NOT YET ACTIVE
+            NO IDEAS YET
           </div>
           <div style={{ fontSize: 12, color: 'var(--foreground)', lineHeight: 1.7, marginBottom: 12 }}>
-            Phase 6 activates content idea surfacing. Hermes will extract ideas from captures, voice notes,
-            and emails — drafting posts and tracking which content converts followers into business leads.
+            Atlas extracts content ideas from captures, voice notes, and emails — drafting posts
+            and tracking which content converts followers into business leads.
           </div>
           <div style={{ fontSize: 10, color: '#333', fontStyle: 'italic' }}>
-            Tell Hermes: "start surfacing content ideas from my captures and voice notes"
+            Ask Atlas: "start surfacing content ideas from my captures and voice notes"
           </div>
         </div>
       )}

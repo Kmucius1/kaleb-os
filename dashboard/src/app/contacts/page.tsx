@@ -17,7 +17,7 @@ export default async function ContactsPage() {
       {all.length === 0 ? (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '48px', textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>
           <div style={{ marginBottom: 8 }}>— no contacts yet —</div>
-          <div style={{ fontSize: 10, color: '#333' }}>Tell Hermes: "add [name] to my contacts as a [business/personal] contact"</div>
+          <div style={{ fontSize: 10, color: '#333' }}>Ask Atlas: "add [name] to my contacts as a [business/personal] contact"</div>
         </div>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>

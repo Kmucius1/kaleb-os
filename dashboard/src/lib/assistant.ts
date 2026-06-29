@@ -2,7 +2,7 @@
 import { supabase } from "./supabase";
 import { supabaseDryp } from "./supabaseDryp";
 import { supabaseLedger } from "./supabaseLedger";
-import { logIdea, logContentIdea, addJournal, addTask, logTrade, logProject, updateClient, draftMessage, getToday, remember } from "./kalebos-actions";
+import { logIdea, logContentIdea, addJournal, addTask, logTrade, logProject, updateClient, draftMessage, getToday, remember, upsertEndeavor } from "./kalebos-actions";
 import { getTradingSnapshot } from "./tradeprint";
 
 // Persona + what Kaleb OS knows about Kaleb — injected into the assistant's system prompt.
@@ -27,6 +27,7 @@ export const TOOLS = [
   { type: "function", function: { name: "add_task", description: "Add a to-do/reminder/follow-up.", parameters: { type: "object", properties: { title: { type: "string" }, deadline: { type: "string" } }, required: ["title"] } } },
   { type: "function", function: { name: "log_trade", description: "Log a trade Kaleb describes (the spoken process/transcript).", parameters: { type: "object", properties: { transcript: { type: "string" }, symbol: { type: "string" }, side: { type: "string", enum: ["long", "short"] }, pnl: { type: "number" }, outcome: { type: "string", enum: ["win", "loss", "breakeven"] }, notes: { type: "string" } }, required: ["transcript"] } } },
   { type: "function", function: { name: "log_project", description: "Record a project update (e.g. building TradePrint, Kaleb OS). Creates the project if new.", parameters: { type: "object", properties: { name: { type: "string" }, note: { type: "string" } }, required: ["name", "note"] } } },
+  { type: "function", function: { name: "log_endeavor", description: "Record/update one of Kaleb's PERSONAL income streams (a 'side hustle' / venture outside the agency, e.g. trading, Ka1eb.ai, an app) and its income. Shows on the Personal Business tab. Use when he says how much an endeavor made (e.g. 'trading made $2k this month', 'add an endeavor: Ka1eb.ai $500/mo'). Matches an existing one by name and updates it. revenue_mtd = this month's income, revenue_total = all-time.", parameters: { type: "object", properties: { name: { type: "string" }, category: { type: "string" }, revenue_mtd: { type: "number" }, revenue_total: { type: "number" }, status: { type: "string", enum: ["active", "paused", "inactive"] }, description: { type: "string" } }, required: ["name"] } } },
   { type: "function", function: { name: "update_client", description: "Update a DRYP client by name: health, lead stage, and/or a note.", parameters: { type: "object", properties: { name: { type: "string" }, health: { type: "string" }, lead_stage: { type: "string" }, note: { type: "string" } }, required: ["name"] } } },
   { type: "function", function: { name: "remember", description: "Save a lasting fact about Kaleb (a preference, how he works, something he likes/dislikes, his goals) so you know him better over time.", parameters: { type: "object", properties: { fact: { type: "string" } }, required: ["fact"] } } },
   { type: "function", function: { name: "get_trading", description: "Kaleb's latest trading journal + psychology from TradePrint (readiness, discipline streak, reflections, rule violations). Use for trading-mindset/discipline questions.", parameters: { type: "object", properties: {} } } },
@@ -93,6 +94,7 @@ async function runTool(name: string, args: Record<string, unknown>): Promise<unk
     case "add_task": return await addTask({ title: String(args.title), deadline: args.deadline as string });
     case "log_trade": return await logTrade({ transcript: String(args.transcript), symbol: args.symbol as string, side: args.side as string, pnl: args.pnl as number, outcome: args.outcome as string, notes: args.notes as string });
     case "log_project": return await logProject({ name: String(args.name), note: String(args.note) });
+    case "log_endeavor": return await upsertEndeavor({ name: String(args.name), category: args.category as string, revenue_mtd: args.revenue_mtd as number, revenue_total: args.revenue_total as number, status: args.status as string, description: args.description as string });
     case "update_client": return await updateClient({ name: String(args.name), health: args.health as string, lead_stage: args.lead_stage as string, note: args.note as string });
     case "remember": return await remember({ fact: String(args.fact) });
     case "set_reminder": {

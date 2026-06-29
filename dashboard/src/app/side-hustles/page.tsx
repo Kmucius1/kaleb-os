@@ -54,7 +54,7 @@ export default async function SideHustlesPage() {
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '40px', textAlign: 'center' }}>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>— no side hustles tracked yet —</div>
           <div style={{ fontSize: 10, color: '#333', lineHeight: 1.8 }}>
-            Tell Hermes: &ldquo;add a side hustle: [name], category: [type], making $[amount] this month&rdquo;
+            Ask Atlas: &ldquo;add a side hustle: [name], category: [type], making $[amount] this month&rdquo;
           </div>
         </div>
       ) : (

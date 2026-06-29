@@ -17,7 +17,7 @@ export default async function ProjectsPage() {
       {all.length === 0 ? (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '48px', textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>
           <div style={{ marginBottom: 8 }}>— no projects yet —</div>
-          <div style={{ fontSize: 10, color: '#333' }}>Tell Hermes: "create a project for [name] in the database"</div>
+          <div style={{ fontSize: 10, color: '#333' }}>Ask Atlas: "create a project for [name]"</div>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>

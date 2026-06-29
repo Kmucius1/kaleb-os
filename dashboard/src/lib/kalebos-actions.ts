@@ -54,6 +54,33 @@ export async function addTask(input: { title: string; deadline?: string; categor
   return { id: data?.id, saved: "tasks", due_date: iso };
 }
 
+// A personal income stream / venture (shows on the Personal "Business" tab).
+// Matches an existing endeavor by name (case-insensitive) and updates it;
+// otherwise creates it. Only provided fields are written.
+export async function upsertEndeavor(input: {
+  name: string; category?: string; revenue_mtd?: number; revenue_total?: number; status?: string; description?: string;
+}) {
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (input.category != null) patch.category = input.category;
+  if (input.revenue_mtd != null) patch.revenue_mtd = input.revenue_mtd;
+  if (input.revenue_total != null) patch.revenue_total = input.revenue_total;
+  if (input.status != null) patch.status = input.status;
+  if (input.description != null) patch.description = input.description;
+
+  const { data: existing } = await supabase.from("side_hustles")
+    .select("id").ilike("name", input.name.trim()).maybeSingle();
+  if (existing) {
+    const { error } = await supabase.from("side_hustles").update(patch).eq("id", existing.id);
+    if (error) throw new Error(error.message);
+    return { id: existing.id, saved: "side_hustles", updated: true };
+  }
+  const { data, error } = await supabase.from("side_hustles")
+    .insert({ name: input.name.trim(), status: input.status ?? "active", ...patch })
+    .select("id").single();
+  if (error) throw new Error(error.message);
+  return { id: data?.id, saved: "side_hustles", created: true };
+}
+
 export async function logTrade(input: {
   transcript: string; symbol?: string; side?: string; pnl?: number; outcome?: string; notes?: string;
 }) {

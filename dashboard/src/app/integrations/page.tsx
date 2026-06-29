@@ -6,7 +6,7 @@ export default function IntegrationsPage() {
     { name: 'PLAUD', status: 'active', detail: 'Webhook at n8n.kalebos.app/webhook/plaud-capture', color: '#22c55e' },
     { name: 'Supabase', status: 'active', detail: 'MCP connection · project eafrjiqjelumqgoefbfd', color: '#3b82f6' },
     { name: 'n8n', status: 'active', detail: 'Self-hosted at n8n.kalebos.app · 2 workflows active', color: '#f59e0b' },
-    { name: 'Telegram', status: 'active', detail: 'Bot @kaleb_hermes_bot · gateway running', color: '#3b82f6' },
+    { name: 'Atlas', status: 'active', detail: 'In-app AI assistant', color: '#3b82f6' },
     { name: 'OpenRouter', status: 'active', detail: 'Model: google/gemini-flash-2.0 · lean usage', color: '#8b5cf6' },
     { name: 'TradePrint', status: 'pending', detail: 'Phase 3 remaining — webhook not yet configured', color: 'var(--muted)' },
     { name: 'Cloudflare Tunnel', status: 'active', detail: 'kalebos.app domain · tunnel active', color: '#f59e0b' },

@@ -83,12 +83,12 @@ export default async function DailyBriefPage() {
       <div style={{ marginTop: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
           <AlertTriangle size={13} color="var(--accent)" />
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em' }}>HERMES RECOMMENDATIONS ({all.length})</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em' }}>ATLAS RECOMMENDATIONS ({all.length})</span>
         </div>
         {all.length === 0 ? (
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>
             <div style={{ marginBottom: 8 }}>— no recommendations yet —</div>
-            <div style={{ fontSize: 10, color: '#333' }}>Tell Hermes in Telegram: "analyze my priorities and give me today's recommendations"</div>
+            <div style={{ fontSize: 10, color: '#333' }}>Ask Atlas: "analyze my priorities and give me today's recommendations"</div>
           </div>
         ) : (
           all.map(r => (

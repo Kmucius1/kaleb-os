@@ -79,7 +79,7 @@ export default async function TradingPage() {
           </div>
           <div style={{ fontSize: 12, color: 'var(--foreground)', lineHeight: 1.7, marginBottom: 12 }}>
             Phase 7 activates trading discipline tracking. Connect TradePrint via n8n webhook to
-            auto-capture trades. Hermes will track P&L, identify patterns, and surface discipline insights.
+            auto-capture trades. Atlas will track P&L, identify patterns, and surface discipline insights.
           </div>
           <div style={{ fontSize: 10, color: '#333', fontStyle: 'italic' }}>
             Activate: build TradePrint → n8n → trading_raw webhook (Phase 3 remaining item)
@@ -114,7 +114,7 @@ export default async function TradingPage() {
       {allInsights.length > 0 && (
         <div style={{ marginBottom: 28 }}>
           <div style={{ color: 'var(--muted)', fontSize: 10, letterSpacing: '0.1em', marginBottom: 12 }}>
-            HERMES INSIGHTS ({allInsights.length})
+            ATLAS INSIGHTS ({allInsights.length})
           </div>
           {allInsights.map(insight => (
             <div key={insight.id} style={{

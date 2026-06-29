@@ -48,7 +48,7 @@ export default async function ApprovalsPage() {
           APPROVAL QUEUE
         </div>
         <div style={{ color: 'var(--muted)', fontSize: 10 }}>
-          {pending.length} pending · approve or reject via Telegram · revalidates 30s
+          {pending.length} pending · approve or reject below · revalidates 30s
         </div>
       </div>
 
@@ -104,7 +104,7 @@ export default async function ApprovalsPage() {
                 borderTop: '1px solid var(--border)',
                 paddingTop: 8,
               }}>
-                Reply to Hermes in Telegram to approve or reject
+                Approve or reject below
               </div>
             </div>
           ))
