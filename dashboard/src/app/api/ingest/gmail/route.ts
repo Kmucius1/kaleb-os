@@ -39,7 +39,15 @@ export async function POST(request: Request) {
       .select("source_id");
     if (error) return Response.json({ error: error.message }, { status: 500 });
 
-    return Response.json({ received: rows.length, upserted: data?.length ?? 0 });
+    const upserted = data?.length ?? 0;
+    // Heartbeat so we (and the dashboard) can confirm the capture ran even when
+    // every email was a dup — proves the cloud Routine reached the endpoint.
+    await supabase.from("kalebos_config").upsert(
+      { key: "gmail_capture_last", value: JSON.stringify({ at: new Date().toISOString(), received: rows.length, upserted }) },
+      { onConflict: "key" },
+    );
+
+    return Response.json({ received: rows.length, upserted });
   } catch (e) {
     return Response.json({ error: (e as Error).message }, { status: 500 });
   }
