@@ -43,6 +43,16 @@ export const TOOLS = [
 const money = (n: number) => "$" + Math.round(n).toLocaleString();
 
 export async function execTool(name: string, args: Record<string, unknown>): Promise<unknown> {
+  // Never let one tool crash the whole chat / ingest: a thrown DB error here
+  // becomes a result Atlas can recover from, so the rest of a capture still files.
+  try {
+    return await runTool(name, args);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+async function runTool(name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
     case "get_revenue": {
       const period = (args.period as string) || "all";

@@ -41,11 +41,17 @@ export async function addJournal(input: { content: string; kind?: string }) {
 }
 
 export async function addTask(input: { title: string; deadline?: string; category?: string }) {
+  // due_date is a DATE column — only store a real YYYY-MM-DD. Atlas sometimes
+  // passes a relative phrase ("this week"); keep that out of the column (and in
+  // the title so it isn't lost) rather than erroring on the whole capture.
+  const raw = input.deadline?.trim();
+  const iso = raw && !isNaN(Date.parse(raw)) ? new Date(raw).toISOString().slice(0, 10) : null;
+  const title = raw && !iso ? `${input.title} (${raw})` : input.title;
   const { data, error } = await supabase.from("tasks")
-    .insert({ title: input.title, due_date: input.deadline ?? null, status: "pending" })
+    .insert({ title, due_date: iso, status: "pending" })
     .select("id").single();
   if (error) throw new Error(error.message);
-  return { id: data?.id, saved: "tasks" };
+  return { id: data?.id, saved: "tasks", due_date: iso };
 }
 
 export async function logTrade(input: {
