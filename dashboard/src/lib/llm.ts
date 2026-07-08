@@ -11,7 +11,7 @@ type Msg = { role: "system" | "user" | "assistant"; content: string };
 
 export async function chat(
   messages: Msg[],
-  opts: { model?: string; temperature?: number; jsonMode?: boolean } = {}
+  opts: { model?: string; temperature?: number; jsonMode?: boolean; maxTokens?: number } = {}
 ): Promise<string> {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new Error("OPENROUTER_API_KEY is not set");
@@ -29,6 +29,7 @@ export async function chat(
       model: opts.model || LLM_MODEL,
       temperature: opts.temperature ?? 0.7,
       messages,
+      ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}),
       ...(opts.jsonMode ? { response_format: { type: "json_object" } } : {}),
     }),
   });

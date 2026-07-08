@@ -5,6 +5,7 @@ import {
   LayoutDashboard, FileText, CheckCircle2, CheckSquare, Target, FolderOpen,
   Lightbulb, Inbox, Brain, Users, TrendingUp, BarChart2, Briefcase, Star,
   Calendar, Zap, Link2, ScrollText, Settings, Wallet, Clapperboard, Sparkles, LayoutGrid,
+  ShoppingBag,
 } from 'lucide-react'
 
 type NavItem = { href: string; label: string; icon: React.ElementType; badge?: number }
@@ -26,6 +27,12 @@ const buildNav = (approvalCount: number, taskCount: number): NavSection[] => [
     items: [
       { href: '/content', label: 'Content Engine', icon: Clapperboard },
       { href: '/personal-brand', label: 'Personal Brand', icon: Star },
+    ],
+  },
+  {
+    title: 'COMMERCE',
+    items: [
+      { href: '/commerce', label: 'Product Scout', icon: ShoppingBag },
     ],
   },
   {
