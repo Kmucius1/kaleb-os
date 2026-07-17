@@ -16,6 +16,7 @@ type Product = {
   score_total: number | null; success_probability: number | null
   verdict: string | null; reasoning: string | null
   disqualified: boolean; disqualify_reason: string | null; status: string; created_at: string
+  build_status: string | null
 }
 type ScoutRun = {
   id: string; ran_at: string; trigger: string; candidates_scored: number | null
@@ -25,6 +26,9 @@ type ScoutRun = {
 const money = (n: number | null | undefined) => (n == null ? '—' : '$' + Number(n).toFixed(2).replace(/\.00$/, ''))
 const factorLabel = (id: string) => FACTORS.find(f => f.id === id)?.label ?? id
 const probColor = (p: number) => (p >= 72 ? 'var(--green)' : p >= 55 ? 'var(--yellow)' : 'var(--muted)')
+const BUILD_STATUS_COLOR: Record<string, string> = {
+  pending: 'var(--yellow)', building: 'var(--accent)', ready: 'var(--cyan)', live: 'var(--green)', failed: 'var(--red)',
+}
 
 export default async function CommercePage() {
   const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString()
@@ -90,7 +94,10 @@ export default async function CommercePage() {
                 <div style={{ fontWeight: 800, fontSize: 16, color: p.disqualified ? 'var(--red)' : probColor(Number(p.success_probability ?? 0)) }}>
                   {p.disqualified ? 'DQ' : p.success_probability ?? '—'}
                 </div>
-                <VerdictChip verdict={p.verdict} status={p.status} disqualified={p.disqualified} />
+                <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                  <VerdictChip verdict={p.verdict} status={p.status} disqualified={p.disqualified} />
+                  {(p.status === 'approved' || p.status === 'launched') && <BuildStatusChip status={p.build_status} />}
+                </div>
               </div>
             </div>
           </Link>
@@ -187,6 +194,12 @@ function VerdictChip({ verdict, status, disqualified }: { verdict: string | null
   return <span style={chip(color)}>{label}</span>
 }
 const chip = (c: string): React.CSSProperties => ({ fontSize: 10.5, fontWeight: 700, color: c, background: `${c}1f`, borderRadius: 6, padding: '2px 7px', textTransform: 'capitalize', display: 'inline-block', marginTop: 4 })
+
+function BuildStatusChip({ status }: { status: string | null }) {
+  const label = status || 'not started'
+  const color = status ? (BUILD_STATUS_COLOR[status] ?? 'var(--muted)') : 'var(--muted)'
+  return <span style={chip(color)}>build: {label}</span>
+}
 
 function StatCard({ label, value, accent, sub }: { label: string; value: string; accent: string; sub?: string }) {
   return (

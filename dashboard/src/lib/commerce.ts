@@ -158,7 +158,7 @@ $20–$50 impulse items with 3x+ markup headroom. Return ONLY a JSON array (no p
 
 // Extract the first COMPLETE balanced JSON array from a possibly prose/fence-wrapped
 // LLM response. Returns [] on truncation or no array (never throws).
-function extractJsonArray<T>(raw: string): T[] {
+export function extractJsonArray<T>(raw: string): T[] {
   const t = raw.replace(/```(?:json)?/gi, '');
   const start = t.indexOf('[');
   if (start === -1) return [];

@@ -23,11 +23,14 @@ export async function POST(request: Request) {
     return Response.json({ error: 'id and valid decision (approve|reject|hold) required' }, { status: 400 })
   }
 
+  const update: Record<string, unknown> = { status: MAP[decision], decided_at: new Date().toISOString() }
+  if (decision === 'approve') update.build_status = 'pending'
+
   const { error } = await supabase
     .from('commerce_products')
-    .update({ status: MAP[decision], decided_at: new Date().toISOString() })
+    .update(update)
     .eq('id', id)
 
   if (error) return Response.json({ error: error.message }, { status: 500 })
-  return Response.json({ ok: true, status: MAP[decision] })
+  return Response.json({ ok: true, status: MAP[decision], ...(decision === 'approve' ? { build: 'pending' } : {}) })
 }

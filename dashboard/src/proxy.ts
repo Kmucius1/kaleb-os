@@ -17,7 +17,8 @@ export function proxy(request: NextRequest) {
     pathname.startsWith('/api/ingest/') ||
     pathname === '/api/mcp' || pathname === '/api/sse' || pathname === '/api/message' ||
     pathname === '/manifest.webmanifest' || pathname === '/sw.js' ||
-    pathname === '/apple-touch-icon.png' || pathname.startsWith('/icon')
+    pathname === '/apple-touch-icon.png' || pathname.startsWith('/icon') ||
+    pathname.startsWith('/shop/') || pathname === '/shop' || pathname.startsWith('/api/shop/')
   ) {
     return NextResponse.next()
   }

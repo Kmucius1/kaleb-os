@@ -3,21 +3,34 @@ import { notFound } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { FACTORS } from '@/lib/commerce-rubric'
 import CommerceDecision from '@/components/CommerceDecision'
-import { ChevronLeft, ExternalLink, AlertTriangle } from 'lucide-react'
+import CommerceBuild from '@/components/CommerceBuild'
+import { ChevronLeft, ExternalLink, AlertTriangle, Loader2 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
 const money = (n: number | null | undefined) => (n == null ? '—' : '$' + Number(n).toFixed(2).replace(/\.00$/, ''))
 const scoreColor = (s: number) => (s >= 8 ? 'var(--green)' : s >= 5 ? 'var(--yellow)' : 'var(--red)')
 
+const BUILD_STATUS_COLOR: Record<string, string> = {
+  pending: 'var(--yellow)', building: 'var(--accent)', ready: 'var(--cyan)', live: 'var(--green)', failed: 'var(--red)',
+}
+
+type BuildEvent = { step: string; status: string; detail: Record<string, unknown> | null; created_at: string }
+
 export default async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { data: p } = await supabase.from('commerce_products').select('*').eq('id', id).single()
+  const [{ data: p }, { data: events }] = await Promise.all([
+    supabase.from('commerce_products').select('*').eq('id', id).single(),
+    supabase.from('commerce_build_events').select('step,status,detail,created_at').eq('product_id', id).order('created_at', { ascending: false }).limit(15),
+  ])
   if (!p) notFound()
 
   const scores = (p.scores ?? {}) as Record<string, { score: number; note: string }>
   const markup = p.supplier_cost && p.suggested_price ? (p.suggested_price / p.supplier_cost).toFixed(1) + 'x' : '—'
   const isWinnerQueued = p.verdict === 'winner' && p.status === 'queued'
+  const showLaunchPipeline = p.status === 'approved' || p.status === 'launched'
+  const buildEvents = (events ?? []) as BuildEvent[]
+  const sourcingNotes = (p.sourcing_notes ?? null) as { confidence?: string | number } | null
 
   return (
     <div className="page-pad" style={{ maxWidth: 900, margin: '0 auto' }}>
@@ -108,12 +121,96 @@ export default async function ProductDetail({ params }: { params: Promise<{ id: 
           <CommerceDecision id={p.id} />
         </div>
       )}
-      {!isWinnerQueued && p.decided_at && (
+      {!isWinnerQueued && !showLaunchPipeline && p.decided_at && (
         <div style={{ marginTop: 20, fontSize: 13, color: 'var(--foreground-2)' }}>
           Status: <b style={{ color: 'var(--foreground)', textTransform: 'capitalize' }}>{p.status}</b>
         </div>
       )}
+
+      {/* LAUNCH PIPELINE */}
+      {showLaunchPipeline && (
+        <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--foreground-2)' }}>LAUNCH PIPELINE</span>
+            <BuildStatusPill status={p.build_status} />
+          </div>
+
+          {p.build_status === 'failed' && p.build_error && (
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--red-dim)', border: '1px solid var(--red)', borderRadius: 12, padding: 14, marginBottom: 14 }}>
+              <AlertTriangle size={17} color="var(--red)" style={{ flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <div style={{ fontWeight: 700, color: 'var(--red)', fontSize: 13.5 }}>Build failed</div>
+                <div style={{ fontSize: 13, color: 'var(--foreground-2)', marginTop: 3 }}>{p.build_error}</div>
+              </div>
+            </div>
+          )}
+
+          {(p.supplier_url || p.sourcing_notes) && (
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 15, marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>SOURCING BRIEF</div>
+              <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 13, color: 'var(--foreground-2)' }}>
+                {p.supplier_url && (
+                  <a href={p.supplier_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent)' }}>
+                    <ExternalLink size={13} /> {p.supplier_source || 'supplier'}
+                  </a>
+                )}
+                <span>real cost <b style={{ color: 'var(--foreground)' }}>{money(p.supplier_cost_real)}</b> <span style={{ color: 'var(--muted)' }}>vs est. {money(p.supplier_cost)}</span></span>
+                {p.shipping_days != null && <span>ships in <b style={{ color: 'var(--foreground)' }}>{p.shipping_days}d</b></span>}
+                {sourcingNotes?.confidence != null && <span>confidence <b style={{ color: 'var(--foreground)' }}>{sourcingNotes.confidence}</b></span>}
+              </div>
+            </div>
+          )}
+
+          {(p.landing_page_url || p.checkout_url) && (
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 14, fontSize: 13 }}>
+              {p.landing_page_url && (
+                <a href={p.landing_page_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--cyan)', fontWeight: 700 }}>
+                  <ExternalLink size={13} /> Landing page
+                </a>
+              )}
+              {p.checkout_url && (
+                <a href={p.checkout_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--green)', fontWeight: 700 }}>
+                  <ExternalLink size={13} /> Checkout
+                </a>
+              )}
+            </div>
+          )}
+
+          <div style={{ marginBottom: 14 }}>
+            <CommerceBuild id={p.id} buildStatus={p.build_status} checkoutUrl={p.checkout_url} landingPageUrl={p.landing_page_url} />
+          </div>
+
+          {buildEvents.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>BUILD EVENTS</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {buildEvents.map((e, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12, padding: '6px 10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                    <span style={{ color: 'var(--foreground-2)' }}>
+                      <b style={{ color: 'var(--foreground)' }}>{e.step}</b> · <span style={{ color: e.status === 'error' ? 'var(--red)' : e.status === 'ok' ? 'var(--green)' : 'var(--muted)' }}>{e.status}</span>
+                    </span>
+                    <span style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{new Date(e.created_at).toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
+  )
+}
+
+function BuildStatusPill({ status }: { status: string | null }) {
+  if (!status) {
+    return <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--muted)', background: 'var(--surface-2)', borderRadius: 6, padding: '2px 8px' }}>not started</span>
+  }
+  const color = BUILD_STATUS_COLOR[status] ?? 'var(--muted)'
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, color, background: `${color}1f`, borderRadius: 6, padding: '2px 8px', textTransform: 'capitalize' }}>
+      {status === 'building' && <Loader2 size={11} className="spin" />}
+      {status}
+    </span>
   )
 }
 

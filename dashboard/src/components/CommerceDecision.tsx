@@ -12,10 +12,18 @@ export default function CommerceDecision({ id }: { id: string }) {
   async function decide(decision: 'approve' | 'reject' | 'hold') {
     setBusy(decision)
     try {
-      await fetch('/api/commerce/decide', {
+      const res = await fetch('/api/commerce/decide', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, decision }),
       })
+      if (res.ok && decision === 'approve') {
+        // Fire the build as an independent request — don't await it, a lambda
+        // freeze on this response would otherwise kill the build.
+        fetch('/api/commerce/build', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }), keepalive: true,
+        }).catch(() => {})
+      }
       setDone(decision)
       router.refresh()
     } finally {
@@ -24,7 +32,7 @@ export default function CommerceDecision({ id }: { id: string }) {
   }
 
   if (done) {
-    const label = done === 'approve' ? 'Approved ✓' : done === 'reject' ? 'Rejected' : 'Held'
+    const label = done === 'approve' ? 'Approved — building…' : done === 'reject' ? 'Rejected' : 'Held'
     const color = done === 'approve' ? 'var(--green)' : done === 'reject' ? 'var(--red)' : 'var(--yellow)'
     return <div style={{ fontSize: 13, fontWeight: 700, color }}>{label}</div>
   }
