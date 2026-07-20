@@ -6,7 +6,7 @@ import {
   Sparkles, Home, FileText, CheckCircle2, CheckSquare, Target, FolderOpen,
   Lightbulb, Inbox, Brain, Users, TrendingUp, BarChart2, Briefcase, Star,
   Calendar, Zap, Link2, ScrollText, Settings, Wallet, Clapperboard, HeartPulse,
-  CalendarDays, ChevronRight,
+  CalendarDays, ChevronRight, CircleCheckBig, LineChart,
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -58,12 +58,14 @@ export default async function AppsPage() {
       title: 'Execution',
       apps: [
         { href: '/tasks', label: 'Tasks', icon: CheckSquare, color: 'linear-gradient(135deg,#10b981,#34d399)', badge: tc },
+        { href: '/habits', label: 'Habits', icon: CircleCheckBig, color: 'linear-gradient(135deg,#059669,#34d399)' },
         { href: '/weekly-reviews', label: 'Reviews', icon: Calendar, color: 'linear-gradient(135deg,#7c3aed,#a78bfa)' },
       ],
     },
     {
-      title: 'Memory',
+      title: 'Intelligence',
       apps: [
+        { href: '/insights', label: 'Insights', icon: LineChart, color: 'linear-gradient(135deg,#8b5cf6,#c084fc)' },
         { href: '/captures', label: 'Captures', icon: Inbox, color: 'linear-gradient(135deg,#0891b2,#22d3ee)' },
         { href: '/memory', label: 'Memories', icon: Brain, color: 'linear-gradient(135deg,#8b5cf6,#a78bfa)' },
         { href: '/contacts', label: 'Contacts', icon: Users, color: 'linear-gradient(135deg,#2563eb,#60a5fa)' },
