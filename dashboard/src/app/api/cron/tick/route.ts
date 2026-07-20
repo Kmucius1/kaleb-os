@@ -1,6 +1,15 @@
 import { supabase } from '@/lib/supabase'
 import { supabaseDryp } from '@/lib/supabaseDryp'
 import { sendPushToAll, claimOnce } from '@/lib/push'
+import { getTodaySchedule, fmtClock } from '@/lib/schedule'
+
+// Emoji per pillar for schedule notifications.
+const PILLAR_EMOJI: Record<string, string> = {
+  Spirit: '🧘', Mind: '🧠', Body: '💪', Money: '💰', Mission: '🚀', Relationships: '🤝',
+}
+// Only fire a block/event within this many minutes of its start (one tick after
+// it begins) so a mid-day deploy doesn't replay the whole morning.
+const BLOCK_WINDOW = 16
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -46,6 +55,28 @@ export async function GET(request: Request) {
     const r = await sendPushToAll({ title: row.title, body: row.body || '', url: row.deep_link || '/', tag: `sched-${row.kind}` })
     sent += r.sent
   }
+
+  // 1b) The schedule itself — fire a push as each block (and dated event) begins.
+  try {
+    const s = await getTodaySchedule()
+    for (const b of s.blocks) {
+      if (!b.notify) continue
+      if (!(nowMin >= b.start_min && nowMin < b.start_min + BLOCK_WINDOW)) continue
+      if (!(await claimOnce('block', b.id, b.title))) continue
+      const emoji = PILLAR_EMOJI[b.pillar] ?? '⏱️'
+      const title = `${emoji} ${fmtClock(b.start_min)} · ${b.title}${b.theme ? ` — ${b.theme}` : ''}`
+      const body = [b.identity ? `Identity: ${b.identity}.` : '', b.detail || ''].filter(Boolean).join(' ')
+      const r = await sendPushToAll({ title, body, url: '/schedule', tag: 'schedule' })
+      sent += r.sent
+    }
+    for (const e of s.events) {
+      if (!e.notify || e.start_min == null) continue
+      if (!(nowMin >= e.start_min && nowMin < e.start_min + BLOCK_WINDOW)) continue
+      if (!(await claimOnce('event', e.id, e.title))) continue
+      const r = await sendPushToAll({ title: `📌 ${fmtClock(e.start_min)} · ${e.title}`, body: e.note || e.location || '', url: '/schedule', tag: 'event' })
+      sent += r.sent
+    }
+  } catch (err) { log.schedule_error = (err as Error).message }
 
   // 2) One-off reminders that have come due.
   const nowIso = new Date().toISOString()

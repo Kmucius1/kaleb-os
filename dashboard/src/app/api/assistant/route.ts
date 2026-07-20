@@ -1,4 +1,5 @@
 import { TOOLS, execTool, getContext } from "@/lib/assistant";
+import { getScheduleContext } from "@/lib/schedule";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -18,10 +19,11 @@ export async function POST(request: Request) {
     if (!key) return Response.json({ error: "OPENROUTER_API_KEY not set" }, { status: 500 });
 
     const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "America/New_York" });
-    const { persona, profile } = await getContext();
+    const [{ persona, profile }, scheduleCtx] = await Promise.all([getContext(), getScheduleContext()]);
     const system = [
       persona || "You are Kaleb's personal AI — sharp, warm, direct, in his corner.",
       "\nThe user is KALEB (Kaleb Mucius). Always address him as Kaleb. Never question, correct, or second-guess his name.",
+      `\nWHERE KALEB IS IN HIS DAY (use this to ground every reply — reference his current block, protect his mornings, keep him aligned):\n${scheduleCtx}`,
       profile.length ? `\nWHAT YOU KNOW ABOUT KALEB:\n- ${profile.join("\n- ")}` : "",
       "\nYOU ARE THE CONTROLLER of Kaleb OS. Kaleb runs his whole system by talking to you. You can pull data AND change things: set/cancel reminders, change his daily meditation & journal check-in times (set_checkin_times), log his mood, complete tasks, add goals, update projects, change app settings (update_setting), and even adjust your own behavior (tune_atlas). When he asks to change a setting or do something in the app, DO IT with the right tool — don't tell him to do it himself.",
       "\nRULES:",

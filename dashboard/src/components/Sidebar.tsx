@@ -5,7 +5,7 @@ import {
   LayoutDashboard, FileText, CheckCircle2, CheckSquare, Target, FolderOpen,
   Lightbulb, Inbox, Brain, Users, TrendingUp, BarChart2, Briefcase, Star,
   Calendar, Zap, Link2, ScrollText, Settings, Wallet, Clapperboard, Sparkles, LayoutGrid,
-  ShoppingBag,
+  ShoppingBag, CalendarDays,
 } from 'lucide-react'
 
 type NavItem = { href: string; label: string; icon: React.ElementType; badge?: number }
@@ -17,6 +17,7 @@ const buildNav = (approvalCount: number, taskCount: number): NavSection[] => [
     items: [
       { href: '/', label: 'Atlas', icon: Sparkles },
       { href: '/dashboard', label: 'Today', icon: LayoutDashboard },
+      { href: '/schedule', label: 'Schedule', icon: CalendarDays },
       { href: '/apps', label: 'Apps', icon: LayoutGrid },
       { href: '/daily-brief', label: 'Daily Brief', icon: FileText },
       { href: '/approvals', label: 'Approvals', icon: CheckCircle2, badge: approvalCount },

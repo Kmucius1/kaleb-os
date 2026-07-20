@@ -5,6 +5,7 @@ import { supabaseLedger } from "./supabaseLedger";
 import { logIdea, logContentIdea, addJournal, addTask, logTrade, logProject, updateClient, draftMessage, getToday, remember, upsertEndeavor } from "./kalebos-actions";
 import { getTradingSnapshot } from "./tradeprint";
 import { getProjects } from "./github";
+import { getTodaySchedule, fmtClock } from "./schedule";
 
 // Persona + what Kaleb OS knows about Kaleb — injected into the assistant's system prompt.
 export async function getContext(): Promise<{ persona: string; profile: string[] }> {
@@ -39,6 +40,8 @@ export const TOOLS = [
   { type: "function", function: { name: "add_goal", description: "Create a goal.", parameters: { type: "object", properties: { title: { type: "string" }, target_date: { type: "string" } }, required: ["title"] } } },
   { type: "function", function: { name: "update_project_status", description: "Set a project's status (matches by name).", parameters: { type: "object", properties: { name: { type: "string" }, status: { type: "string", enum: ["active", "completed", "paused"] } }, required: ["name", "status"] } } },
   { type: "function", function: { name: "get_projects", description: "Kaleb's GitHub project portfolio (all his repos) organized by what he's actively working on vs dormant. Use for 'what am I working on', 'which projects are stale', 'what have I not touched', portfolio/side-project questions. Shows last-push recency + his manual labels (working|live|shelved|idea).", parameters: { type: "object", properties: {} } } },
+  { type: "function", function: { name: "get_schedule", description: "Kaleb's schedule for today — his structured daily rhythm (the six-pillar blocks) plus any one-off events, and which block he is in RIGHT NOW. Use for 'what's my day', 'what's next', 'when is X', 'am I on track', or any time/schedule question.", parameters: { type: "object", properties: {} } } },
+  { type: "function", function: { name: "add_event", description: "Add a one-off event to Kaleb's personal calendar. KalebOS IS his personal calendar (not Google) — when he mentions an appointment/meeting/plan tied to a date (e.g. 'dentist Thursday at 3', 'call with Mick tomorrow 2-3pm', 'flight Saturday'), add it. date = YYYY-MM-DD (ET). start/end = 24h 'HH:MM' (omit both for all-day). pillar optional (Spirit|Mind|Body|Money|Mission|Relationships).", parameters: { type: "object", properties: { title: { type: "string" }, date: { type: "string" }, start: { type: "string" }, end: { type: "string" }, location: { type: "string" }, note: { type: "string" }, pillar: { type: "string" } }, required: ["title", "date"] } } },
   { type: "function", function: { name: "tune_atlas", description: "Adjust how YOU (Atlas) behave going forward per Kaleb's instruction (e.g. 'be more concise', 'call me bro less'). Persists to your persona.", parameters: { type: "object", properties: { change: { type: "string" } }, required: ["change"] } } },
   { type: "function", function: { name: "update_setting", description: "Set any app config key/value (kalebos_config). Use for misc settings Kaleb asks to change.", parameters: { type: "object", properties: { key: { type: "string" }, value: { type: "string" } }, required: ["key", "value"] } } },
 ] as const;
@@ -158,6 +161,38 @@ async function runTool(name: string, args: Record<string, unknown>): Promise<unk
         language: p.language,
         description: p.description,
       }));
+    }
+    case "get_schedule": {
+      const s = await getTodaySchedule();
+      const fmt = (b: any) => ({ time: `${fmtClock(b.start_min)}–${fmtClock(b.end_min)}`, title: b.title, pillar: b.pillar, ...(b.theme ? { theme: b.theme } : {}), ...(b.identity ? { identity: b.identity } : {}) });
+      return {
+        dayType: s.dayType,
+        now: fmtClock(s.nowMin),
+        currentBlock: s.current ? fmt(s.current) : "transition / open",
+        nextBlock: s.next ? fmt(s.next) : "end of day",
+        blocks: s.blocks.map(fmt),
+        events: s.events.map((e: any) => ({ time: e.start_min != null ? fmtClock(e.start_min) : "all day", title: e.title, location: e.location, note: e.note })),
+      };
+    }
+    case "add_event": {
+      const toMin = (t?: string): number | null => {
+        if (!t) return null;
+        const m = /^(\d{1,2}):(\d{2})/.exec(t.trim());
+        if (!m) return null;
+        return (Number(m[1]) % 24) * 60 + Number(m[2]);
+      };
+      const row = {
+        title: String(args.title),
+        event_date: String(args.date),
+        start_min: toMin(args.start as string),
+        end_min: toMin(args.end as string),
+        location: (args.location as string) ?? null,
+        note: (args.note as string) ?? null,
+        pillar: (args.pillar as string) ?? null,
+        source: "atlas",
+      };
+      const { data, error } = await supabase.from("schedule_events").insert(row).select().single();
+      return error ? { error: error.message } : { ok: true, event: { title: data.title, date: data.event_date, at: data.start_min != null ? fmtClock(data.start_min) : "all day" } };
     }
     case "tune_atlas": {
       const { data: cfg } = await supabase.from("kalebos_config").select("value").eq("key", "persona").maybeSingle();
