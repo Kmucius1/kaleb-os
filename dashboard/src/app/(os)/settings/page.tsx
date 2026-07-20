@@ -22,30 +22,33 @@ export default function SettingsPage() {
   ]
 
   return (
-    <div className="page-pad" style={{ maxWidth: 800, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
-        <Settings size={18} color="var(--accent)" />
-        <span style={{ color: 'var(--foreground)', fontWeight: 800, fontSize: 20, letterSpacing: '-0.01em' }}>Settings</span>
+    <div className="page-pad" style={{ maxWidth: 720, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
+        <Settings size={20} color="var(--accent)" />
+        <h1 style={{ color: 'var(--foreground)', fontWeight: 800, fontSize: 25, letterSpacing: '-0.02em', margin: 0 }}>Settings</h1>
       </div>
 
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 20 }}>
         <NotificationsToggle />
       </div>
 
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: '3px solid var(--accent)', borderRadius: 6, padding: '12px 16px', marginBottom: 24 }}>
-        <div style={{ fontSize: 10, color: 'var(--accent)', marginBottom: 4 }}>Settings are managed by Atlas, your in-app assistant.</div>
-        <div style={{ fontSize: 10, color: 'var(--muted)' }}>To change a setting, just ask Atlas in the app (e.g. &ldquo;update my quiet hours to 8am–10pm&rdquo;), or edit it here in the dashboard.</div>
+      <div className="card2" style={{ borderLeft: '3px solid var(--accent)', padding: '14px 16px', marginBottom: 24 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--foreground-2)', lineHeight: 1.55 }}>
+          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>Settings are managed by Atlas</span>, your in-app assistant. To change one, just ask (e.g. &ldquo;update my quiet hours to 8am–10pm&rdquo;), or edit it here in the dashboard.
+        </div>
       </div>
 
       {settings.map(group => (
-        <div key={group.section} style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.12em', marginBottom: 10 }}>{group.section}</div>
-          {group.items.map(item => (
-            <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 4, marginBottom: 4 }}>
-              <span style={{ fontSize: 11, color: 'var(--foreground-2)' }}>{item.label}</span>
-              <span style={{ fontSize: 11, color: 'var(--foreground)', fontWeight: 500 }}>{item.value}</span>
-            </div>
-          ))}
+        <div key={group.section} style={{ marginBottom: 22 }}>
+          <div className="section-label" style={{ marginBottom: 10 }}>{group.section}</div>
+          <div className="card2" style={{ padding: 0, overflow: 'hidden' }}>
+            {group.items.map((item, idx) => (
+              <div key={item.label} className="list-row" style={{ justifyContent: 'space-between', borderTop: idx ? '1px solid var(--border)' : 'none' }}>
+                <span style={{ fontSize: 13, color: 'var(--foreground-2)' }}>{item.label}</span>
+                <span style={{ fontSize: 13, color: 'var(--foreground)', fontWeight: 500, textAlign: 'right' }}>{item.value}</span>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </div>

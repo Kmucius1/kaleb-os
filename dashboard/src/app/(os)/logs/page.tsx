@@ -16,23 +16,27 @@ export default async function LogsPage() {
   ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 80)
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1200 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
-        <ScrollText size={16} color="var(--accent)" />
-        <span style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: 16, letterSpacing: '0.06em' }}>SYSTEM LOGS</span>
-        <span style={{ color: 'var(--muted)', fontSize: 11 }}>{feed.length} recent entries · revalidates 30s</span>
+    <div className="page-pad" style={{ maxWidth: 1000, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
+        <ScrollText size={20} color="var(--accent)" />
+        <h1 style={{ color: 'var(--foreground)', fontWeight: 800, fontSize: 25, letterSpacing: '-0.02em', margin: 0 }}>System Logs</h1>
+        <span style={{ color: 'var(--muted)', fontSize: 12 }}>{feed.length} recent entries</span>
       </div>
 
-      <div style={{ fontFamily: 'inherit' }}>
+      <div className="card2" style={{ padding: '4px 0', overflowX: 'auto' }}>
         {feed.map((entry, i) => (
-          <div key={i} style={{ display: 'flex', gap: 12, padding: '5px 0', borderBottom: '1px solid #111', alignItems: 'baseline' }}>
-            <span style={{ fontSize: 9, color: 'var(--muted)', whiteSpace: 'nowrap', minWidth: 110 }}>
+          <div key={i} style={{ display: 'flex', gap: 12, padding: '9px 16px', borderTop: i ? '1px solid var(--border)' : 'none', alignItems: 'baseline' }}>
+            <span style={{ fontSize: 10.5, color: 'var(--muted)', whiteSpace: 'nowrap', minWidth: 110 }}>
               {formatTime(entry.time)}
             </span>
-            <span style={{ fontSize: 11, color: entry.type === 'action' ? 'var(--accent)' : '#4285f4', whiteSpace: 'nowrap', minWidth: 70 }}>
-              [{entry.type.toUpperCase()}]
+            <span className="pillar-tag" style={{
+              color: entry.type === 'action' ? 'var(--accent)' : 'var(--blue)',
+              background: entry.type === 'action' ? 'var(--accent-dim)' : 'var(--blue-dim)',
+              flexShrink: 0, minWidth: 66, textAlign: 'center',
+            }}>
+              {entry.type.toUpperCase()}
             </span>
-            <span style={{ fontSize: 11, color: 'var(--foreground-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 12, color: 'var(--foreground-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {entry.label}
             </span>
           </div>

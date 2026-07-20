@@ -6,7 +6,7 @@ import {
   Sparkles, Home, FileText, CheckCircle2, CheckSquare, Target, FolderOpen,
   Lightbulb, Inbox, Brain, Users, TrendingUp, BarChart2, Briefcase, Star,
   Calendar, Zap, Link2, ScrollText, Settings, Wallet, Clapperboard, HeartPulse,
-  CalendarDays,
+  CalendarDays, ChevronRight,
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -105,31 +105,36 @@ export default async function AppsPage() {
 
   const groups: Group[] = [...(space === 'dryp' ? drypGroups : personalGroups), sharedGroup]
 
+  // "At a glance" — real, already-fetched live counts only (no invented data).
+  const glance = [
+    { href: '/approvals', label: 'Awaiting approval', icon: CheckCircle2, color: 'linear-gradient(135deg,#f59e0b,#fbbf24)', value: ac, tint: 'var(--yellow)' },
+    { href: '/tasks', label: 'Open tasks', icon: CheckSquare, color: 'linear-gradient(135deg,#10b981,#34d399)', value: tc, tint: 'var(--green)' },
+  ]
+
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '20px 14px 28px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 6px 2px' }}>
+    <div style={{ maxWidth: 760, margin: '0 auto', padding: '20px 16px 28px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 4px 6px' }}>
         <h1 className="ios-largetitle">Apps</h1>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: meta.color, background: `${meta.color}1f`, padding: '4px 10px', borderRadius: 20 }}>
           <SpaceIcon size={13} /> {meta.label}
         </span>
       </div>
-      <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 6px 20px' }}>
-        {space === 'dryp' ? 'The agency — clients, delivery & revenue' : 'You + your missions & ventures'}
+      <p style={{ color: 'var(--foreground-2)', fontSize: 13.5, lineHeight: 1.55, margin: '0 4px 24px' }}>
+        {space === 'dryp' ? 'The agency — clients, delivery & revenue.' : 'You + your missions & ventures.'}
       </p>
 
       {groups.map(group => (
-        <section key={group.title} style={{ marginBottom: 22 }}>
-          <h2 style={{
-            fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-            color: 'var(--muted)', margin: '0 6px 8px',
-          }}>{group.title}</h2>
+        <section key={group.title} style={{ marginBottom: 24 }}>
+          <h2 className="section-label" style={{ margin: '0 4px 10px' }}>{group.title}</h2>
           <div className="springboard">
             {group.apps.map(app => {
               const Icon = app.icon
               return (
                 <Link key={group.title + app.href + app.label} href={app.href} className="app-icon">
                   <span className="app-tile" style={{ background: app.color }}>
-                    <Icon size={28} color="#fff" strokeWidth={2} />
+                    {/* glossy top sheen */}
+                    <span aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', background: 'linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.04) 42%, rgba(0,0,0,0.10) 100%)', pointerEvents: 'none' }} />
+                    <Icon size={27} color="#fff" strokeWidth={2} style={{ position: 'relative', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.28))' }} />
                     {app.badge != null && app.badge > 0 && (
                       <span className="app-tile-badge">{app.badge > 99 ? '99+' : app.badge}</span>
                     )}
@@ -141,6 +146,26 @@ export default async function AppsPage() {
           </div>
         </section>
       ))}
+
+      {/* At a glance — live counts (real fetched data only) */}
+      <section style={{ marginTop: 2 }}>
+        <h2 className="section-label" style={{ margin: '0 4px 10px' }}>At a Glance</h2>
+        <div className="card2" style={{ padding: 4 }}>
+          {glance.map((g, i) => {
+            const Icon = g.icon
+            return (
+              <Link key={g.href} href={g.href} className="list-row row-hover" style={{ borderRadius: 14, borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                <span className="grad-icon" style={{ width: 40, height: 40, background: g.color }}>
+                  <Icon size={19} color="#fff" strokeWidth={2} />
+                </span>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: 'var(--foreground)' }}>{g.label}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: g.value > 0 ? g.tint : 'var(--muted)', minWidth: 24, textAlign: 'right' }}>{g.value}</span>
+                <ChevronRight size={16} color="var(--muted)" />
+              </Link>
+            )
+          })}
+        </div>
+      </section>
     </div>
   )
 }

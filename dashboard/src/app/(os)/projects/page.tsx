@@ -1,5 +1,5 @@
 import { getProjects, type Project } from '@/lib/github'
-import { FolderGit2, Lock, Globe } from 'lucide-react'
+import { Lock, Globe } from 'lucide-react'
 import ProjectStatusSelect from '@/components/ProjectStatusSelect'
 
 export const revalidate = 300
@@ -14,15 +14,15 @@ function groupOf(p: Project): string {
 }
 
 const GROUPS: { key: string; title: string; emoji: string; color: string }[] = [
-  { key: 'working', title: 'WORKING NOW', emoji: '🔨', color: '#10b981' },
-  { key: 'live', title: 'LIVE / SHIPPED', emoji: '🚀', color: '#3b82f6' },
-  { key: 'warm', title: 'WARM', emoji: '🟡', color: '#f59e0b' },
-  { key: 'idea', title: 'IDEAS', emoji: '💡', color: '#8b5cf6' },
-  { key: 'dormant', title: 'DORMANT', emoji: '⚪', color: 'var(--muted)' },
-  { key: 'shelved', title: 'SHELVED', emoji: '🗄️', color: '#a16207' },
+  { key: 'working', title: 'Working Now', emoji: '🔨', color: 'var(--green)' },
+  { key: 'live', title: 'Live / Shipped', emoji: '🚀', color: '#60a5fa' },
+  { key: 'warm', title: 'Warm', emoji: '🟡', color: '#fbbf24' },
+  { key: 'idea', title: 'Ideas', emoji: '💡', color: 'var(--accent)' },
+  { key: 'dormant', title: 'Dormant', emoji: '⚪', color: 'var(--muted)' },
+  { key: 'shelved', title: 'Shelved', emoji: '🗄️', color: '#a16207' },
 ]
 
-const ACTIVITY_DOT: Record<string, string> = { active: '#10b981', warm: '#f59e0b', dormant: '#6b7280' }
+const ACTIVITY_DOT: Record<string, string> = { active: 'var(--green)', warm: '#fbbf24', dormant: '#6b7280' }
 
 function ago(days: number): string {
   if (days <= 0) return 'today'
@@ -37,11 +37,13 @@ export default async function ProjectsPage() {
 
   if (projects.length === 0) {
     return (
-      <div style={{ padding: '24px 28px', maxWidth: 1100 }}>
+      <div className="page-pad" style={{ maxWidth: 1000, margin: '0 auto' }}>
         <Header count={0} />
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '48px', textAlign: 'center', color: 'var(--muted)', fontSize: 12, lineHeight: 1.7 }}>
-          <div style={{ marginBottom: 8 }}>— no repos loaded —</div>
-          <div style={{ fontSize: 11, color: '#666' }}>Set <code style={{ color: 'var(--accent)' }}>GITHUB_TOKEN</code> in the environment to pull your GitHub portfolio.</div>
+        <div className="card2" style={{ textAlign: 'center', padding: '48px 24px' }}>
+          <div style={{ color: 'var(--foreground-2)', fontSize: 14, marginBottom: 8 }}>No repos loaded</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
+            Set <code style={{ color: 'var(--accent)' }}>GITHUB_TOKEN</code> in the environment to pull your GitHub portfolio.
+          </div>
         </div>
       </div>
     )
@@ -63,20 +65,20 @@ export default async function ProjectsPage() {
   const liveCount = projects.filter(p => p.status === 'live').length
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1100 }}>
+    <div className="page-pad" style={{ maxWidth: 1000, margin: '0 auto' }}>
       <Header count={projects.length} />
 
       {/* glanceable overview */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 28 }}>
         {[
-          { label: 'WORKING NOW', value: activeCount, color: '#10b981' },
-          { label: 'LIVE', value: liveCount, color: '#3b82f6' },
-          { label: 'WARM', value: warmCount, color: '#f59e0b' },
-          { label: 'DORMANT', value: dormantCount, color: 'var(--muted)' },
+          { label: 'Working Now', value: activeCount, color: 'var(--green)' },
+          { label: 'Live', value: liveCount, color: '#60a5fa' },
+          { label: 'Warm', value: warmCount, color: '#fbbf24' },
+          { label: 'Dormant', value: dormantCount, color: 'var(--muted)' },
         ].map((s, i) => (
-          <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '14px 16px' }}>
-            <div style={{ fontSize: 9, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 6 }}>{s.label}</div>
-            <div style={{ fontSize: 26, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
+          <div key={i} className="stat-tile">
+            <div className="stat-num" style={{ color: s.color }}>{s.value}</div>
+            <div className="stat-cap">{s.label}</div>
           </div>
         ))}
       </div>
@@ -88,10 +90,10 @@ export default async function ProjectsPage() {
           <div key={g.key} style={{ marginBottom: 28 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <span style={{ fontSize: 13 }}>{g.emoji}</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: g.color, letterSpacing: '0.1em' }}>{g.title}</span>
+              <span className="section-label" style={{ color: g.color }}>{g.title}</span>
               <span style={{ fontSize: 10, color: 'var(--muted)' }}>{list.length}</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: 12 }}>
               {list.map(p => <Card key={p.repo} p={p} />)}
             </div>
           </div>
@@ -103,31 +105,30 @@ export default async function ProjectsPage() {
 
 function Header({ count }: { count: number }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
-      <FolderGit2 size={16} color="var(--accent)" />
-      <span style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: 16, letterSpacing: '0.06em' }}>PROJECTS</span>
-      <span style={{ color: 'var(--muted)', fontSize: 11 }}>{count} repos · GitHub @Kmucius1</span>
+    <div style={{ marginBottom: 24 }}>
+      <h1 style={{ fontSize: 27, fontWeight: 800, letterSpacing: '-0.02em', margin: '2px 0 4px' }}>Projects</h1>
+      <p style={{ color: 'var(--foreground-2)', fontSize: 13.5, margin: 0 }}>{count} repos · GitHub @Kmucius1</p>
     </div>
   )
 }
 
 function Card({ p }: { p: Project }) {
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="card2" style={{ padding: 14, borderRadius: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <a href={p.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', minWidth: 0 }}>
           <span title={p.activity} style={{ width: 7, height: 7, borderRadius: '50%', background: ACTIVITY_DOT[p.activity], flexShrink: 0 }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
           {p.isPrivate ? <Lock size={10} color="var(--muted)" /> : <Globe size={10} color="var(--muted)" />}
         </a>
         <ProjectStatusSelect repo={p.repo} value={p.status} />
       </div>
 
       {p.description && (
-        <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.description}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--foreground-2)', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.description}</div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 'auto', fontSize: 9, color: 'var(--muted)', letterSpacing: '0.04em' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto', fontSize: 10, color: 'var(--muted)', letterSpacing: '0.02em' }}>
         {p.language && <span>{p.language}</span>}
         <span>· {ago(p.daysSincePush)}</span>
         {p.archived && <span style={{ color: '#a16207' }}>· archived</span>}

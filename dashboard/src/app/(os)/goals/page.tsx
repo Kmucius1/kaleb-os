@@ -21,108 +21,83 @@ export default async function GoalsPage() {
   const hasGoals = all.length > 0
 
   return (
-    <div style={{ padding: '20px 28px', maxWidth: 1200 }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: 12,
-        marginBottom: 24,
-        paddingBottom: 16,
-        borderBottom: '1px solid var(--border)',
-      }}>
-        <div style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: 13, letterSpacing: '0.08em' }}>
-          GOALS
-        </div>
-        <span style={{
-          fontSize: 9,
-          color: hasGoals ? 'var(--accent)' : 'var(--muted)',
-          border: `1px solid ${hasGoals ? 'rgba(255,102,0,0.4)' : 'var(--border)'}`,
-          padding: '2px 6px',
-          letterSpacing: '0.06em',
-        }}>
-          PHASE 5
-        </span>
-        {hasGoals && (
-          <div style={{ color: 'var(--muted)', fontSize: 10 }}>{all.length} goals set</div>
-        )}
+    <div className="page-pad" style={{ maxWidth: 760, margin: '0 auto' }}>
+      {/* Title */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 0 4px' }}>
+        <h1 style={{ fontSize: 27, fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>Goals</h1>
+        <span className="pillar-tag" style={{ color: 'var(--accent)', background: 'var(--accent-dim)' }}>Phase 5</span>
       </div>
-
-      {!hasGoals && (
-        <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderLeft: '3px solid #222',
-          padding: '20px 24px',
-          marginBottom: 32,
-        }}>
-          <div style={{ color: 'var(--muted)', fontSize: 10, letterSpacing: '0.08em', marginBottom: 8 }}>
-            NO GOALS YET
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--foreground)', lineHeight: 1.7, marginBottom: 12 }}>
-            Track goals, weekly accountability challenges, and execution audits here.
-            Set them up by asking Atlas.
-          </div>
-          <div style={{ fontSize: 10, color: '#333', fontStyle: 'italic' }}>
-            Ask Atlas: "set up my six priorities as goals"
-          </div>
-        </div>
-      )}
+      <p style={{ color: 'var(--foreground-2)', fontSize: 13.5, margin: '0 0 20px' }}>
+        {hasGoals ? `${all.length} goals set — ranked by priority.` : 'The six priorities, ranked and tracked.'}
+      </p>
 
       {hasGoals ? (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ color: 'var(--muted)', fontSize: 10, letterSpacing: '0.09em', textAlign: 'left' }}>
-              <th style={{ paddingBottom: 8, fontWeight: 400, width: 50 }}>RANK</th>
-              <th style={{ paddingBottom: 8, fontWeight: 400 }}>GOAL</th>
-              <th style={{ paddingBottom: 8, fontWeight: 400, width: 90 }}>STATUS</th>
-              <th style={{ paddingBottom: 8, fontWeight: 400, width: 100 }}>DUE</th>
-            </tr>
-          </thead>
-          <tbody>
-            {all.map((g: any, i: number) => (
-              <tr key={g.id} style={{ borderBottom: '1px solid #161616' }}>
-                <td style={{ padding: '10px 16px 10px 0', color: 'var(--accent)', fontSize: 14, fontWeight: 700 }}>
-                  {g.priority ?? i + 1}
-                </td>
-                <td style={{ padding: '10px 16px 10px 0' }}>
-                  <div style={{ fontSize: 12, color: 'var(--foreground)', marginBottom: 2 }}>{g.title}</div>
-                  {g.description && (
-                    <div style={{ fontSize: 10, color: 'var(--muted)' }}>{g.description}</div>
-                  )}
-                </td>
-                <td style={{ padding: '10px 16px 10px 0', fontSize: 10, color: 'var(--green)', fontWeight: 700, letterSpacing: '0.06em' }}>
-                  {(g.status ?? 'active').toUpperCase()}
-                </td>
-                <td style={{ padding: '10px 0', fontSize: 10, color: 'var(--muted)' }}>
-                  {g.due_date ?? '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          <div className="section-label" style={{ marginBottom: 12 }}>Active Goals</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {all.map((g: any, i: number) => {
+              const status = (g.status ?? 'active').toUpperCase()
+              const statusColor = status === 'ACTIVE' ? 'var(--green)' : status === 'DONE' || status === 'COMPLETED' ? 'var(--accent)' : 'var(--muted)'
+              return (
+                <div key={g.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 14, padding: '13px 14px',
+                  background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14,
+                }}>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 15, fontWeight: 800,
+                  }}>
+                    {g.priority ?? i + 1}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--foreground)' }}>{g.title}</div>
+                    {g.description && (
+                      <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.4, marginTop: 2 }}>{g.description}</div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, flexShrink: 0 }}>
+                    <span className="pillar-tag" style={{ color: statusColor, background: statusColor === 'var(--green)' ? 'var(--green-dim)' : 'var(--accent-dim)' }}>{status}</span>
+                    <span style={{ fontSize: 10, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{g.due_date ?? '—'}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
       ) : (
         <>
-          <div style={{ color: 'var(--muted)', fontSize: 10, letterSpacing: '0.1em', marginBottom: 16 }}>
-            SIX PRIORITIES — WILL BECOME GOALS
-          </div>
-          {SIX_PRIORITIES.map(p => (
-            <div key={p.rank} style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 16,
-              padding: '12px 0',
-              borderBottom: '1px solid #161616',
-              opacity: 0.45,
-            }}>
-              <div style={{ color: 'var(--accent)', fontSize: 16, fontWeight: 700, width: 24, flexShrink: 0, textAlign: 'right' }}>
-                {p.rank}
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: 'var(--foreground)' }}>{p.label}</div>
-                <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{p.sub}</div>
-              </div>
+          <div className="card2" style={{ marginBottom: 24 }}>
+            <div className="section-label" style={{ marginBottom: 8 }}>No Goals Yet</div>
+            <div style={{ fontSize: 13.5, color: 'var(--foreground)', lineHeight: 1.6, marginBottom: 10 }}>
+              Track goals, weekly accountability challenges, and execution audits here. Set them up by asking Atlas.
             </div>
-          ))}
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>
+              Ask Atlas: &ldquo;set up my six priorities as goals&rdquo;
+            </div>
+          </div>
+
+          <div className="section-label" style={{ marginBottom: 12 }}>Six Priorities — Will Become Goals</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {SIX_PRIORITIES.map(p => (
+              <div key={p.rank} style={{
+                display: 'flex', alignItems: 'center', gap: 14, padding: '13px 14px',
+                background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, opacity: 0.6,
+              }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 15, fontWeight: 800,
+                }}>
+                  {p.rank}
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--foreground)' }}>{p.label}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>{p.sub}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </>
       )}
     </div>

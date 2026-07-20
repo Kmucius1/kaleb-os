@@ -47,16 +47,16 @@ async function PersonalBusiness() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, paddingBottom: 14, borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
         <Rocket size={18} color="#6366f1" />
-        <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>Personal</span>
+        <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>Personal</span>
         <span style={{ color: 'var(--muted)', fontSize: 12 }}>Your ventures &amp; income</span>
       </div>
 
       {/* Stats */}
       <div className="stat-grid" style={{ margin: '0 0 26px' }}>
-        <StatCard label="INCOME / MO" value={totalMtd > 0 ? money(totalMtd) : '—'} accent="#34d399" sub="across endeavors" />
-        <StatCard label="ALL-TIME" value={totalAll > 0 ? money(totalAll) : '—'} accent="#a78bfa" sub="total earned" />
-        <StatCard label="ENDEAVORS" value={String(active.length || '—')} accent="#22d3ee" sub="earning now" />
-        <StatCard label="PROJECTS" value={String(openProjects.length || '—')} accent="#6366f1" sub="in motion" />
+        <StatCard label="INCOME / MO" value={totalMtd > 0 ? money(totalMtd) : '—'} accent="var(--green)" sub="across endeavors" />
+        <StatCard label="ALL-TIME" value={totalAll > 0 ? money(totalAll) : '—'} accent="var(--purple)" sub="total earned" />
+        <StatCard label="ENDEAVORS" value={String(active.length || '—')} accent="var(--cyan)" sub="earning now" />
+        <StatCard label="PROJECTS" value={String(openProjects.length || '—')} accent="var(--accent)" sub="in motion" />
       </div>
 
       {/* ENDEAVORS — per income stream (mirrors DRYP's per-client view) */}
@@ -70,7 +70,7 @@ async function PersonalBusiness() {
                 {h.category && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2, textTransform: 'capitalize' }}>{h.category}</div>}
               </div>
               <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                <div style={{ fontWeight: 800, fontSize: 16, color: '#34d399' }}>{h.revenue_mtd ? money(Number(h.revenue_mtd)) + '/mo' : '—'}</div>
+                <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--green)' }}>{h.revenue_mtd ? money(Number(h.revenue_mtd)) + '/mo' : '—'}</div>
                 {h.revenue_total ? <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>{money(Number(h.revenue_total))} all-time</div> : null}
               </div>
             </div>
@@ -133,7 +133,7 @@ async function DrypBusiness() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, paddingBottom: 14, borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
         <Briefcase size={18} color="#14b8a6" />
-        <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>DRYP</span>
+        <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>DRYP</span>
         <span style={{ color: 'var(--muted)', fontSize: 12 }}>Agency · CRM</span>
         <a href="https://www.dryphub.com" target="_blank" rel="noopener noreferrer"
           style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--foreground-2)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, padding: '8px 12px' }}>
@@ -143,10 +143,10 @@ async function DrypBusiness() {
 
       {/* Stats */}
       <div className="stat-grid" style={{ margin: '0 0 26px' }}>
-        <StatCard label="PIPELINE" value={money(pipeline)} accent="#fbbf24" sub="open" />
-        <StatCard label="MRR" value={money(mrr)} accent="#34d399" sub="retainers" />
-        <StatCard label="CLIENTS" value={String(activeAccounts.length)} accent="#22d3ee" sub="active" />
-        <StatCard label="CASH IN" value={rev ? money(rev.cashIn) : '—'} accent="#a78bfa" sub={rev ? `${money(rev.thisMonth)} this mo` : 'CFO'} />
+        <StatCard label="PIPELINE" value={money(pipeline)} accent="var(--yellow)" sub="open" />
+        <StatCard label="MRR" value={money(mrr)} accent="var(--green)" sub="retainers" />
+        <StatCard label="CLIENTS" value={String(activeAccounts.length)} accent="var(--cyan)" sub="active" />
+        <StatCard label="CASH IN" value={rev ? money(rev.cashIn) : '—'} accent="var(--purple)" sub={rev ? `${money(rev.thisMonth)} this mo` : 'CFO'} />
       </div>
 
       {/* LEADS */}
@@ -200,15 +200,15 @@ async function DrypBusiness() {
 // helpers
 function StatCard({ label, value, accent, sub }: { label: string; value: string; accent: string; sub?: string }) {
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `3px solid ${accent}`, borderRadius: 14, padding: '14px 15px' }}>
-      <div style={{ fontSize: 23, fontWeight: 800, letterSpacing: '-0.02em' }}>{value}</div>
-      <div style={{ fontSize: 10, color: 'var(--muted)', letterSpacing: '0.06em', marginTop: 3, textTransform: 'uppercase' }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--foreground-2)', marginTop: 3 }}>{sub}</div>}
+    <div className="stat-tile">
+      <div className="stat-num" style={{ color: accent }}>{value}</div>
+      <div className="stat-cap">{label}</div>
+      {sub && <div className="stat-sub">{sub}</div>}
     </div>
   )
 }
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--foreground-2)', marginBottom: 10 }}>{children}</div>
+  return <div className="section-label" style={{ marginBottom: 12 }}>{children}</div>
 }
 function Chip({ text }: { text: string }) {
   return <span style={{ fontSize: 11, color: 'var(--foreground-2)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', textTransform: 'capitalize' }}>{text}</span>

@@ -53,50 +53,55 @@ export default async function PersonalBrandPage() {
   const maxReach = ig && ig.reachDays.length > 0 ? Math.max(...ig.reachDays, 1) : 1
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1100 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
-        <Star size={16} color="var(--accent)" />
-        <span style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: 16, letterSpacing: '0.06em' }}>PERSONAL BRAND</span>
-        <span style={{ color: 'var(--muted)', fontSize: 10 }}>"One System. Built to Win."</span>
+    <div className="page-pad" style={{ maxWidth: 1100, margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+        <div className="grad-icon" style={{ width: 40, height: 40, background: 'var(--accent-grad)' }}>
+          <Star size={19} color="#fff" />
+        </div>
+        <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>Personal Brand</span>
+        <span style={{ color: 'var(--muted)', fontSize: 12 }}>&ldquo;One System. Built to Win.&rdquo;</span>
       </div>
 
+      {/* Top stat tiles */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 24 }}>
         {[
-          { label: 'IDEAS CAPTURED', value: String(all.length), color: '#8b5cf6' },
-          { label: 'AUDIENCE GROWTH', value: ig ? `+${ig.weeklyFollowers}` : '—', color: ig ? '#10b981' : 'var(--muted)' },
-          { label: 'CONTENT PUBLISHED', value: ig ? String(ig.posts) : '—', color: ig ? 'var(--foreground)' : 'var(--muted)' },
+          { label: 'Ideas Captured', value: String(all.length), color: 'var(--accent)', sub: 'in the vault' },
+          { label: 'Audience Growth', value: ig ? `+${ig.weeklyFollowers}` : '—', color: ig ? 'var(--green)' : 'var(--muted)', sub: 'this week' },
+          { label: 'Content Published', value: ig ? String(ig.posts) : '—', color: ig ? 'var(--foreground)' : 'var(--muted)', sub: 'all-time posts' },
         ].map((s, i) => (
-          <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '16px' }}>
-            <div style={{ fontSize: 9, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 8 }}>{s.label}</div>
-            <div style={{ fontSize: 26, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
+          <div key={i} className="stat-tile">
+            <div className="stat-num" style={{ color: s.color }}>{s.value}</div>
+            <div className="stat-cap">{s.label}</div>
+            <div className="stat-sub">{s.sub}</div>
           </div>
         ))}
       </div>
 
       {ig && (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '16px 20px', marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Camera size={12} color="#e1306c" />
-            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em' }}>INSTAGRAM — @{ig.username}</span>
+        <div className="card2" style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+            <Camera size={13} color="#e1306c" />
+            <span className="section-label" style={{ color: 'var(--foreground)' }}>Instagram — @{ig.username}</span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 22 }}>
             {[
-              { label: 'FOLLOWERS', value: ig.followers.toLocaleString(), color: '#e1306c' },
-              { label: 'FOLLOWING', value: ig.following.toLocaleString(), color: 'var(--muted)' },
-              { label: 'WEEKLY REACH', value: ig.weeklyReach.toLocaleString(), color: '#8b5cf6' },
-              { label: 'NEW THIS WEEK', value: `+${ig.weeklyFollowers}`, color: '#10b981' },
+              { label: 'Followers', value: ig.followers.toLocaleString(), color: '#e1306c' },
+              { label: 'Following', value: ig.following.toLocaleString(), color: 'var(--foreground-2)' },
+              { label: 'Weekly Reach', value: ig.weeklyReach.toLocaleString(), color: 'var(--accent)' },
+              { label: 'New This Week', value: `+${ig.weeklyFollowers}`, color: 'var(--green)' },
             ].map((s, i) => (
               <div key={i}>
-                <div style={{ fontSize: 8, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 5 }}>{s.label}</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: s.color, lineHeight: 1 }}>{s.value}</div>
+                <div className="stat-cap" style={{ marginTop: 6 }}>{s.label}</div>
               </div>
             ))}
           </div>
 
           <div>
-            <div style={{ fontSize: 8, color: 'var(--muted)', letterSpacing: '0.1em', marginBottom: 8 }}>DAILY REACH — LAST 7 DAYS</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 48 }}>
+            <div className="section-label" style={{ marginBottom: 10 }}>Daily Reach — Last 7 Days</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 48 }}>
               {ig.reachDays.map((v: number, i: number) => (
                 <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
                   <div
@@ -104,8 +109,8 @@ export default async function PersonalBrandPage() {
                     style={{
                       width: '100%',
                       height: `${Math.max(4, (v / maxReach) * 44)}px`,
-                      background: 'linear-gradient(to top, #6d28d9, #8b5cf6)',
-                      borderRadius: '2px 2px 0 0',
+                      background: 'linear-gradient(to top, #6366f1, var(--accent-2))',
+                      borderRadius: '3px 3px 0 0',
                       opacity: 0.6 + (i / Math.max(ig.reachDays.length - 1, 1)) * 0.4,
                     }}
                   />
@@ -116,24 +121,26 @@ export default async function PersonalBrandPage() {
         </div>
       )}
 
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', marginBottom: 12 }}>
-        CONTENT IDEAS ({all.length})
+      <div className="section-label" style={{ marginBottom: 14 }}>
+        Content Ideas ({all.length})
       </div>
       {all.length === 0 ? (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: 11 }}>
+        <div className="card2" style={{ padding: 32, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>
           <div style={{ marginBottom: 8 }}>— no ideas captured yet —</div>
-          <div style={{ fontSize: 10, color: '#333' }}>Ask Atlas: "surface content ideas from my captures and voice notes"</div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted-2)' }}>Ask Atlas: &ldquo;surface content ideas from my captures and voice notes&rdquo;</div>
         </div>
       ) : (
-        all.map((idea: any) => (
-          <div key={idea.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '12px 16px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div style={{ fontSize: 12, color: 'var(--foreground)', fontWeight: 600, marginBottom: 3 }}>{idea.title}</div>
-              {idea.description && <div style={{ fontSize: 10, color: 'var(--muted)' }}>{idea.description.slice(0, 100)}</div>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {all.map((idea: any) => (
+            <div key={idea.id} className="list-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, color: 'var(--foreground)', fontWeight: 600, marginBottom: 3 }}>{idea.title}</div>
+                {idea.description && <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.45 }}>{idea.description.slice(0, 100)}</div>}
+              </div>
+              <div style={{ fontSize: 10.5, color: 'var(--muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{formatTime(idea.created_at)}</div>
             </div>
-            <div style={{ fontSize: 9, color: 'var(--muted)', whiteSpace: 'nowrap', marginLeft: 12 }}>{formatTime(idea.created_at)}</div>
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </div>
   )

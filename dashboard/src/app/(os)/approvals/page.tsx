@@ -18,7 +18,7 @@ function statusColor(status: string) {
     pending_approval: 'var(--accent)',
     approved: 'var(--green)',
     rejected: 'var(--red)',
-    executed: '#3b82f6',
+    executed: 'var(--blue)',
   }
   return map[status] ?? 'var(--muted)'
 }
@@ -35,120 +35,74 @@ export default async function ApprovalsPage() {
   const history = all.filter(a => a.status !== 'pending_approval')
 
   return (
-    <div style={{ padding: '20px 28px', maxWidth: 1200 }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: 16,
-        marginBottom: 24,
-        paddingBottom: 16,
-        borderBottom: '1px solid var(--border)',
-      }}>
-        <div style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: 13, letterSpacing: '0.08em' }}>
-          APPROVAL QUEUE
-        </div>
-        <div style={{ color: 'var(--muted)', fontSize: 10 }}>
-          {pending.length} pending · approve or reject below · revalidates 30s
-        </div>
+    <div className="page-pad" style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22, flexWrap: 'wrap' }}>
+        <h1 style={{ color: 'var(--foreground)', fontWeight: 800, fontSize: 25, letterSpacing: '-0.02em', margin: 0 }}>Approval Queue</h1>
+        <span style={{ color: 'var(--muted)', fontSize: 12 }}>
+          {pending.length} pending · approve or reject below
+        </span>
       </div>
 
       {error && (
-        <div style={{ color: 'var(--red)', fontSize: 11, marginBottom: 16 }}>Error: {error.message}</div>
+        <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 16 }}>Error: {error.message}</div>
       )}
 
       {/* Pending section */}
-      <div style={{ marginBottom: 36 }}>
-        <div style={{
-          color: pending.length > 0 ? 'var(--accent)' : 'var(--muted)',
-          fontWeight: 700,
-          fontSize: 10,
-          letterSpacing: '0.1em',
-          marginBottom: 12,
-        }}>
-          PENDING ({pending.length})
+      <div style={{ marginBottom: 32 }}>
+        <div className="section-label" style={{ color: pending.length > 0 ? 'var(--accent)' : 'var(--muted)', marginBottom: 12 }}>
+          Pending ({pending.length})
         </div>
 
         {pending.length === 0 ? (
-          <div style={{
-            color: 'var(--muted)',
-            fontSize: 11,
-            padding: '28px 0',
-            textAlign: 'center',
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-          }}>
-            — no pending approvals —
+          <div className="card2" style={{ color: 'var(--muted)', fontSize: 13, padding: '28px 0', textAlign: 'center' }}>
+            No pending approvals
           </div>
         ) : (
-          pending.map(a => (
-            <div key={a.id} style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderLeft: '3px solid var(--accent)',
-              padding: '14px 18px',
-              marginBottom: 8,
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                <span style={{ color: 'var(--accent)', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em' }}>
-                  {a.action_type?.toUpperCase() ?? 'ACTION'}
-                </span>
-                <span style={{ color: 'var(--muted)', fontSize: 10 }}>{formatTime(a.created_at)}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {pending.map(a => (
+              <div key={a.id} className="card2" style={{ borderLeft: '3px solid var(--accent)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, gap: 10 }}>
+                  <span className="pillar-tag" style={{ color: 'var(--accent)', background: 'var(--accent-dim)' }}>
+                    {a.action_type?.toUpperCase() ?? 'ACTION'}
+                  </span>
+                  <span style={{ color: 'var(--muted)', fontSize: 11 }}>{formatTime(a.created_at)}</span>
+                </div>
+                <div style={{ fontSize: 13.5, color: 'var(--foreground)', marginBottom: 10, lineHeight: 1.5 }}>
+                  {a.description}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', fontStyle: 'italic', borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                  Approve or reject below
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--foreground)', marginBottom: 10, lineHeight: 1.5 }}>
-                {a.description}
-              </div>
-              <div style={{
-                fontSize: 10,
-                color: '#333',
-                fontStyle: 'italic',
-                borderTop: '1px solid var(--border)',
-                paddingTop: 8,
-              }}>
-                Approve or reject below
-              </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
 
       {/* History */}
       {history.length > 0 && (
         <div>
-          <div style={{ color: 'var(--muted)', fontWeight: 700, fontSize: 10, letterSpacing: '0.1em', marginBottom: 12 }}>
-            HISTORY ({history.length})
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ color: 'var(--muted)', fontSize: 10, letterSpacing: '0.09em', textAlign: 'left' }}>
-                <th style={{ paddingBottom: 8, fontWeight: 400, width: 120 }}>STATUS</th>
-                <th style={{ paddingBottom: 8, fontWeight: 400, width: 100 }}>TYPE</th>
-                <th style={{ paddingBottom: 8, fontWeight: 400 }}>DESCRIPTION</th>
-                <th style={{ paddingBottom: 8, fontWeight: 400, width: 120, textAlign: 'right' }}>TIME</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((a, i) => (
-                <tr key={a.id} style={{ borderBottom: '1px solid #161616' }}>
-                  <td style={{ padding: '8px 16px 8px 0' }}>
-                    <span style={{ color: statusColor(a.status), fontSize: 9, fontWeight: 700, letterSpacing: '0.06em' }}>
-                      {a.status.replace(/_/g, ' ').toUpperCase()}
-                    </span>
-                  </td>
-                  <td style={{ padding: '8px 16px 8px 0', fontSize: 10, color: 'var(--muted)' }}>
+          <div className="section-label" style={{ marginBottom: 12 }}>History ({history.length})</div>
+          <div className="card2" style={{ padding: 0, overflow: 'hidden' }}>
+            {history.map((a, i) => (
+              <div key={a.id} className="list-row" style={{ gap: 14, borderTop: i ? '1px solid var(--border)' : 'none', alignItems: 'flex-start' }}>
+                <span className="pillar-tag" style={{ color: statusColor(a.status), background: `color-mix(in srgb, ${statusColor(a.status)} 14%, transparent)`, flexShrink: 0, minWidth: 78, textAlign: 'center' }}>
+                  {a.status.replace(/_/g, ' ').toUpperCase()}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {a.description}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 2 }}>
                     {a.action_type ?? '—'}
-                  </td>
-                  <td style={{ padding: '8px 16px 8px 0', maxWidth: 400 }}>
-                    <div style={{ fontSize: 11, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {a.description}
-                    </div>
-                  </td>
-                  <td style={{ padding: '8px 0', fontSize: 10, color: 'var(--muted)', textAlign: 'right' }}>
-                    {formatTime(a.created_at)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  {formatTime(a.created_at)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

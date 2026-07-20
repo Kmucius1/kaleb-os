@@ -14,7 +14,7 @@ type Capture = {
 }
 
 function sourceColor(source: string) {
-  const map: Record<string, string> = { gmail: '#4285f4', plaud: '#00c853' }
+  const map: Record<string, string> = { gmail: 'var(--blue)', plaud: 'var(--green)' }
   return map[source] ?? 'var(--accent)'
 }
 
@@ -37,139 +37,91 @@ export default async function CapturesPage() {
   }
 
   return (
-    <div style={{ padding: '20px 28px', maxWidth: 1400 }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: 16,
-        marginBottom: 24,
-        paddingBottom: 16,
-        borderBottom: '1px solid var(--border)',
-      }}>
-        <div style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: 13, letterSpacing: '0.08em' }}>
-          RAW CAPTURES
-        </div>
-        <div style={{ color: 'var(--muted)', fontSize: 10 }}>
+    <div className="page-pad" style={{ maxWidth: 1100, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22, flexWrap: 'wrap' }}>
+        <h1 style={{ color: 'var(--foreground)', fontWeight: 800, fontSize: 25, letterSpacing: '-0.02em', margin: 0 }}>Raw Captures</h1>
+        <span style={{ color: 'var(--muted)', fontSize: 12 }}>
           {total ?? 0} total
           {(unprocessed ?? 0) > 0 && (
-            <span style={{ color: '#f59e0b' }}> · {unprocessed} unprocessed</span>
+            <span style={{ color: 'var(--yellow)' }}> · {unprocessed} unprocessed</span>
           )}
-          {' '}· last 100 shown · revalidates 60s
-        </div>
+          {' '}· last 100 shown
+        </span>
       </div>
 
       {/* Source breakdown */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
         {Object.entries(sourceCounts).map(([source, count]) => (
-          <div key={source} style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderLeft: `3px solid ${sourceColor(source)}`,
-            padding: '10px 14px',
-            minWidth: 90,
-          }}>
-            <div style={{ fontSize: 9, color: sourceColor(source), fontWeight: 700, letterSpacing: '0.1em', marginBottom: 4 }}>
-              {source.toUpperCase()}
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--foreground)', lineHeight: 1 }}>
-              {count}
-            </div>
+          <div key={source} className="stat-tile" style={{ minWidth: 96 }}>
+            <div className="stat-num" style={{ color: 'var(--foreground)' }}>{count}</div>
+            <div className="stat-cap" style={{ color: sourceColor(source) }}>{source}</div>
           </div>
         ))}
         {(unprocessed ?? 0) > 0 && (
-          <div style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderLeft: '3px solid #f59e0b',
-            padding: '10px 14px',
-            minWidth: 90,
-          }}>
-            <div style={{ fontSize: 9, color: '#f59e0b', fontWeight: 700, letterSpacing: '0.1em', marginBottom: 4 }}>
-              UNPROCESSED
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#f59e0b', lineHeight: 1 }}>
-              {unprocessed}
-            </div>
+          <div className="stat-tile" style={{ minWidth: 96 }}>
+            <div className="stat-num" style={{ color: 'var(--yellow)' }}>{unprocessed}</div>
+            <div className="stat-cap" style={{ color: 'var(--yellow)' }}>Unprocessed</div>
           </div>
         )}
       </div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ color: 'var(--muted)', fontSize: 10, letterSpacing: '0.09em', textAlign: 'left' }}>
-            <th style={{ paddingBottom: 8, fontWeight: 400, width: 130 }}>TIME (ET)</th>
-            <th style={{ paddingBottom: 8, fontWeight: 400, width: 70 }}>SOURCE</th>
-            <th style={{ paddingBottom: 8, fontWeight: 400, width: 100 }}>TYPE</th>
-            <th style={{ paddingBottom: 8, fontWeight: 400, width: 30 }}>✓</th>
-            <th style={{ paddingBottom: 8, fontWeight: 400 }}>CONTENT</th>
-          </tr>
-        </thead>
-        <tbody>
-          {captures.length === 0 ? (
-            <tr>
-              <td colSpan={5} style={{ color: 'var(--muted)', padding: '40px 0', textAlign: 'center' }}>
-                — no captures yet —
-              </td>
-            </tr>
-          ) : (
-            captures.map((c, i) => {
-              const preview = c.metadata?.subject || c.metadata?.title || c.content_text?.slice(0, 120) || '—'
-              const from = c.metadata?.from?.replace(/<.*?>/g, '').trim().slice(0, 40) ?? ''
-              return (
-                <tr
-                  key={c.id}
-                  style={{
-                    borderBottom: '1px solid #161616',
-                    background: i % 2 === 1 ? 'var(--surface)' : 'transparent',
-                  }}
-                >
-                  <td style={{ padding: '8px 16px 8px 0', color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap' }}>
-                    {formatTime(c.created_at)}
-                  </td>
-                  <td style={{ padding: '8px 16px 8px 0' }}>
-                    <span style={{
-                      color: sourceColor(c.source),
-                      fontWeight: 700,
-                      fontSize: 9,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                    }}>
-                      {c.source}
-                    </span>
-                  </td>
-                  <td style={{ padding: '8px 16px 8px 0', color: 'var(--muted)', fontSize: 11 }}>
-                    {c.content_type.replace(/_/g, ' ')}
-                  </td>
-                  <td style={{ padding: '8px 16px 8px 0' }}>
-                    <span style={{ fontSize: 11, color: c.processed_at ? 'var(--green)' : '#333' }}>
-                      {c.processed_at ? '✓' : '·'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '8px 0', overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'baseline' }}>
-                      <span style={{
-                        fontSize: 12,
-                        color: 'var(--foreground)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        maxWidth: 500,
-                      }}>
-                        {preview}
+      <div className="card2" style={{ padding: 0, overflowX: 'auto' }}>
+        {captures.length === 0 ? (
+          <div style={{ color: 'var(--muted)', fontSize: 13, padding: '40px 0', textAlign: 'center' }}>
+            No captures yet
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ color: 'var(--muted)', fontSize: 9.5, letterSpacing: '0.09em', textAlign: 'left' }}>
+                <th style={{ padding: '12px 14px', fontWeight: 700, width: 130 }}>TIME (ET)</th>
+                <th style={{ padding: '12px 14px', fontWeight: 700, width: 70 }}>SOURCE</th>
+                <th style={{ padding: '12px 14px', fontWeight: 700, width: 100 }}>TYPE</th>
+                <th style={{ padding: '12px 14px', fontWeight: 700, width: 30 }}>✓</th>
+                <th style={{ padding: '12px 14px', fontWeight: 700 }}>CONTENT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {captures.map((c) => {
+                const preview = c.metadata?.subject || c.metadata?.title || c.content_text?.slice(0, 120) || '—'
+                const from = c.metadata?.from?.replace(/<.*?>/g, '').trim().slice(0, 40) ?? ''
+                return (
+                  <tr key={c.id} className="row-hover" style={{ borderTop: '1px solid var(--border)' }}>
+                    <td style={{ padding: '11px 14px', color: 'var(--muted)', fontSize: 11.5, whiteSpace: 'nowrap' }}>
+                      {formatTime(c.created_at)}
+                    </td>
+                    <td style={{ padding: '11px 14px' }}>
+                      <span style={{ color: sourceColor(c.source), fontWeight: 700, fontSize: 9.5, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                        {c.source}
                       </span>
-                      {from && (
-                        <span style={{ fontSize: 10, color: 'var(--muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                          {from}
+                    </td>
+                    <td style={{ padding: '11px 14px', color: 'var(--foreground-2)', fontSize: 11.5 }}>
+                      {c.content_type.replace(/_/g, ' ')}
+                    </td>
+                    <td style={{ padding: '11px 14px' }}>
+                      <span style={{ fontSize: 12, color: c.processed_at ? 'var(--green)' : 'var(--muted)' }}>
+                        {c.processed_at ? '✓' : '·'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '11px 14px', overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'baseline' }}>
+                        <span style={{ fontSize: 12.5, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 500 }}>
+                          {preview}
                         </span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )
-            })
-          )}
-        </tbody>
-      </table>
+                        {from && (
+                          <span style={{ fontSize: 10.5, color: 'var(--muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            {from}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   )
 }
