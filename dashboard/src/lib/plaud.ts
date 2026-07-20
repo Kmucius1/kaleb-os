@@ -1,15 +1,27 @@
 // Server-side PLAUD client. Lets a Vercel cron pull recordings with NO laptop /
-// MCP / Claude session — using the non-rotating refresh token in PLAUD_REFRESH_TOKEN.
+// MCP / Claude session. IMPORTANT: PLAUD refresh tokens are 7-day JWTs that
+// ROTATE on each refresh — the endpoint returns a fresh refresh_token. So we
+// store the live token in kalebos_config.plaud_refresh_token and persist the
+// rotated one every run: as long as the cron fires within 7 days (every 30 min),
+// it rolls forward forever. PLAUD_REFRESH_TOKEN env is only the initial seed.
 // API surface mirrors @plaud-ai/mcp: platform.plaud.ai/developer/api/open/third-party.
+import { supabase } from "./supabase";
 
 const API = "https://platform.plaud.ai/developer/api";
 const REFRESH_URL = `${API}/oauth/third-party/access-token/refresh`;
 const BASE = `${API}/open/third-party`;
+const RT_KEY = "plaud_refresh_token";
 
-// Mint a fresh 24h access token from the long-lived (non-rotating) refresh token.
+async function getRefreshToken(): Promise<string> {
+  const { data } = await supabase.from("kalebos_config").select("value").eq("key", RT_KEY).maybeSingle();
+  const t = (data?.value || process.env.PLAUD_REFRESH_TOKEN || "").trim();
+  if (!t) throw new Error("PLAUD refresh token not set (kalebos_config or env)");
+  return t;
+}
+
+// Mint a fresh 24h access token AND persist the rotated refresh token.
 export async function plaudAccessToken(): Promise<string> {
-  const rt = process.env.PLAUD_REFRESH_TOKEN;
-  if (!rt) throw new Error("PLAUD_REFRESH_TOKEN not set");
+  const rt = await getRefreshToken();
   const res = await fetch(REFRESH_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
@@ -18,6 +30,10 @@ export async function plaudAccessToken(): Promise<string> {
   if (!res.ok) throw new Error(`PLAUD token refresh failed: ${res.status} ${(await res.text()).slice(0, 160)}`);
   const data = await res.json();
   if (!data.access_token) throw new Error("PLAUD refresh returned no access_token");
+  // Roll the refresh token forward so it never expires while the cron runs.
+  if (data.refresh_token && data.refresh_token !== rt) {
+    await supabase.from("kalebos_config").upsert({ key: RT_KEY, value: data.refresh_token }, { onConflict: "key" });
+  }
   return data.access_token as string;
 }
 
