@@ -4,6 +4,7 @@ import { supabaseDryp } from "./supabaseDryp";
 import { supabaseLedger } from "./supabaseLedger";
 import { logIdea, logContentIdea, addJournal, addTask, logTrade, logProject, updateClient, draftMessage, getToday, remember, upsertEndeavor } from "./kalebos-actions";
 import { getTradingSnapshot } from "./tradeprint";
+import { getProjects } from "./github";
 
 // Persona + what Kaleb OS knows about Kaleb — injected into the assistant's system prompt.
 export async function getContext(): Promise<{ persona: string; profile: string[] }> {
@@ -37,6 +38,7 @@ export const TOOLS = [
   { type: "function", function: { name: "complete_task", description: "Mark a task done (matches by title). status defaults to completed; can also be 'cancelled' or 'in_progress'.", parameters: { type: "object", properties: { title: { type: "string" }, status: { type: "string", enum: ["completed", "cancelled", "in_progress"] } }, required: ["title"] } } },
   { type: "function", function: { name: "add_goal", description: "Create a goal.", parameters: { type: "object", properties: { title: { type: "string" }, target_date: { type: "string" } }, required: ["title"] } } },
   { type: "function", function: { name: "update_project_status", description: "Set a project's status (matches by name).", parameters: { type: "object", properties: { name: { type: "string" }, status: { type: "string", enum: ["active", "completed", "paused"] } }, required: ["name", "status"] } } },
+  { type: "function", function: { name: "get_projects", description: "Kaleb's GitHub project portfolio (all his repos) organized by what he's actively working on vs dormant. Use for 'what am I working on', 'which projects are stale', 'what have I not touched', portfolio/side-project questions. Shows last-push recency + his manual labels (working|live|shelved|idea).", parameters: { type: "object", properties: {} } } },
   { type: "function", function: { name: "tune_atlas", description: "Adjust how YOU (Atlas) behave going forward per Kaleb's instruction (e.g. 'be more concise', 'call me bro less'). Persists to your persona.", parameters: { type: "object", properties: { change: { type: "string" } }, required: ["change"] } } },
   { type: "function", function: { name: "update_setting", description: "Set any app config key/value (kalebos_config). Use for misc settings Kaleb asks to change.", parameters: { type: "object", properties: { key: { type: "string" }, value: { type: "string" } }, required: ["key", "value"] } } },
 ] as const;
@@ -145,6 +147,17 @@ async function runTool(name: string, args: Record<string, unknown>): Promise<unk
       const { data, error } = await supabase.from("projects").update({ status: String(args.status) })
         .ilike("name", `%${String(args.name)}%`).select("id,name");
       return error ? { error: error.message } : { ok: true, updated: data?.length ?? 0 };
+    }
+    case "get_projects": {
+      const projects = await getProjects();
+      return projects.map(p => ({
+        name: p.name,
+        status: p.status ?? p.activity,
+        lastPush: `${p.daysSincePush}d ago`,
+        private: p.isPrivate,
+        language: p.language,
+        description: p.description,
+      }));
     }
     case "tune_atlas": {
       const { data: cfg } = await supabase.from("kalebos_config").select("value").eq("key", "persona").maybeSingle();
