@@ -19,17 +19,27 @@
 @media (prefers-reduced-motion: reduce) { .skel::after { animation: none; } }
 
 :root {
-  /* Cool, modern dark surfaces (slight blue tint reads "techy", not "terminal") */
-  --background: #0a0b0f;
-  --surface: #13151c;
-  --surface-2: #1a1d26;
-  --border: #23262f;
-  --border-2: #2e313c;
+  /* OLED-first premium dark (from Kaleb's mockup) — cards float on near-black */
+  --background: #050507;
+  --surface: #0f0f14;
+  --surface-2: #16161d;
+  --surface-3: #1c1c25;
+  --border: #1e1e27;
+  --border-2: #2a2a35;
 
-  /* Calm indigo accent (replaces the harsh engineering orange) */
-  --accent: #6366f1;
-  --accent-2: #22d3ee;          /* cyan highlight */
-  --accent-dim: rgba(99, 102, 241, 0.14);
+  /* Violet accent + signature gradient */
+  --accent: #8b5cf6;
+  --accent-2: #a855f7;
+  --accent-dim: rgba(139, 92, 246, 0.14);
+  --accent-grad: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+
+  /* Six-pillar palette (canonical — tags, bars, gradient icons) */
+  --spirit: #a78bfa;
+  --mind: #60a5fa;
+  --body: #34d399;
+  --money: #fbbf24;
+  --mission: #fb923c;
+  --relationships: #f472b6;
 
   --green: #34d399;  --green-dim: rgba(52, 211, 153, 0.12);
   --red: #f87171;    --red-dim: rgba(248, 113, 113, 0.12);
@@ -38,15 +48,36 @@
   --purple: #a78bfa;
   --cyan: #22d3ee;
 
-  /* Softer, more readable text ramp */
-  --foreground: #eceef3;
-  --foreground-2: #9aa1b1;
-  --muted: #6b7280;
-  --muted-2: #2e313c;
+  /* Text ramp */
+  --foreground: #f4f4f7;
+  --foreground-2: #a0a0ad;
+  --muted: #63636f;
+  --muted-2: #2a2a35;
 
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, system-ui, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
+
+/* ============================================================
+   DESIGN SYSTEM — reusable premium components (see DESIGN_SPEC.md)
+   ============================================================ */
+.section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.card2 { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px; }
+.stat-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; }
+.stat-num { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+.stat-cap { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 7px; }
+.stat-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+.grad-icon { display: flex; align-items: center; justify-content: center; border-radius: 16px; position: relative; box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
+
+.pillar-tag { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 7px; border-radius: 6px; white-space: nowrap; }
+
+.seg { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 3px; gap: 2px; }
+.seg-item { flex: 1; text-align: center; padding: 7px 10px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--foreground-2); cursor: pointer; transition: all .12s; }
+.seg-item.active { background: var(--surface-3); color: var(--foreground); box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+
+.list-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.tl-bar { width: 3px; border-radius: 2px; flex-shrink: 0; align-self: stretch; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 

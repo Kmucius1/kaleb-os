@@ -7,12 +7,12 @@ import { supabase } from "./supabase";
 export const TZ = "America/New_York";
 
 export const PILLAR_COLORS: Record<string, string> = {
-  Spirit: "#8b5cf6",
-  Mind: "#3b82f6",
-  Body: "#10b981",
-  Money: "#f59e0b",
-  Mission: "#ec4899",
-  Relationships: "#14b8a6",
+  Spirit: "#a78bfa",
+  Mind: "#60a5fa",
+  Body: "#34d399",
+  Money: "#fbbf24",
+  Mission: "#fb923c",
+  Relationships: "#f472b6",
 };
 
 export type Block = {

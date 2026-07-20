@@ -1,216 +1,113 @@
 import { supabase } from '@/lib/supabase'
-import { supabaseDryp } from '@/lib/supabaseDryp'
-import { getRevenueSnapshot, type RevenueSnapshot } from '@/lib/ledger'
-import JournalBox from '@/components/JournalBox'
+import { getRevenueSnapshot } from '@/lib/ledger'
+import { getTodaySchedule, fmtClock, PILLAR_COLORS } from '@/lib/schedule'
 import Link from 'next/link'
-import {
-  Sunrise, CheckCircle2, Circle, Brain, TrendingUp, Clapperboard,
-  Users, DollarSign, ArrowUpRight, ExternalLink, UserPlus, ListChecks,
-} from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
 const money = (n: number) => '$' + Math.round(n).toLocaleString()
-const BRAND_DOT: Record<string, string> = { me: '#34d399', ai: '#a78bfa', trading: '#fbbf24' }
 
-export default async function Dashboard() {
-  const now = new Date()
-  const etHour = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(now))
-  const greeting = etHour < 12 ? 'Good morning' : etHour < 18 ? 'Good afternoon' : 'Good evening'
-  const dateStr = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' }).format(now)
-  const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(now) // YYYY-MM-DD
+function etHourNow(): number {
+  return Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(new Date())) % 24
+}
 
-  // Fire all three datasources (3 separate databases) concurrently. These used
-  // to run as sequential waterfalls — KalebOS, then DRYP CRM, then Ledger — which
-  // is what made the page slow. Now the render waits on the slowest one, not the sum.
-  const [kos, crm, rev] = await Promise.all([
-    Promise.all([
-      supabase.from('brands').select('id,slug,name,color'),
-      supabase.from('content_ideas').select('id,brand_id,title,angle,platform,status').in('status', ['idea', 'approved']).order('created_at', { ascending: false }).limit(8),
-      supabase.from('content_scripts').select('id', { count: 'exact', head: true }).in('status', ['draft', 'final']),
-      supabase.from('journal').select('id').eq('entry_date', todayStr).limit(1),
-      supabase.from('tasks').select('title,status').in('status', ['pending', 'in_progress']).limit(5),
-    ]),
-    (async () => {
-      try {
-        return await Promise.all([
-          supabaseDryp.from('accounts').select('business_name,is_active'),
-          supabaseDryp.from('leads').select('business_name,stage,created_at').order('created_at', { ascending: false }),
-        ])
-      } catch { return null }
-    })(),
-    getRevenueSnapshot().catch(() => null as RevenueSnapshot | null),
+// Journal-based consistency over the last 7 days + current streak.
+async function getConsistency(): Promise<{ pct: number; streak: number }> {
+  const today = new Date()
+  const dayStr = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d)
+  const start = new Date(today.getTime() - 7 * 86400000)
+  const { data } = await supabase.from('journal').select('entry_date').gte('entry_date', dayStr(start))
+  const days = new Set((data ?? []).map((r: any) => r.entry_date))
+  const last7 = Array.from({ length: 7 }, (_, i) => dayStr(new Date(today.getTime() - i * 86400000)))
+  const hit = last7.filter(d => days.has(d)).length
+  let streak = 0
+  for (let i = 0; i < 60; i++) { if (days.has(dayStr(new Date(today.getTime() - i * 86400000)))) streak++; else if (i > 0) break }
+  return { pct: Math.round((hit / 7) * 100), streak }
+}
+
+export default async function Home() {
+  const h = etHourNow()
+  const greeting = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
+
+  const [sched, consistency, { count: taskCount }, rev, { data: cfg }] = await Promise.all([
+    getTodaySchedule(),
+    getConsistency(),
+    supabase.from('tasks').select('id', { count: 'exact', head: true }).in('status', ['pending', 'in_progress']),
+    getRevenueSnapshot().catch(() => null),
+    supabase.from('kalebos_config').select('value').eq('key', 'north_star').maybeSingle(),
   ])
 
-  // ── KalebOS data ──
-  const [{ data: brands }, { data: ideas }, { count: scriptCount }, { data: journalToday }, { data: tasksData }] = kos
-  const brandById = new Map((brands ?? []).map(b => [b.id, b]))
-  const journaledToday = (journalToday ?? []).length > 0
-  const tasks: { title: string }[] = tasksData ?? []
-
-  // ── DRYP CRM ──
-  let activeClients = 0, clientNames: string[] = [], newLeads = 0, recentLeads: { business_name: string }[] = []
-  if (crm) {
-    const [{ data: accts }, { data: leads }] = crm
-    const active = (accts ?? []).filter(a => a.is_active)
-    activeClients = active.length
-    clientNames = active.map(a => (a.business_name as string).trim()).slice(0, 4)
-    const open = (leads ?? []).filter(l => !['won', 'lost', 'completed'].includes(l.stage as string))
-    const brandNew = open.filter(l => l.stage === 'not_started')
-    newLeads = brandNew.length
-    recentLeads = (brandNew.length ? brandNew : open).slice(0, 3)
-  }
-
-  const ideasReady = (ideas ?? []).length
-
-  // ── derive Today's action items ──
-  const items: { label: string; done?: boolean; href?: string; icon: React.ElementType; accent?: string }[] = [
-    { label: journaledToday ? 'Meditate & journal — done' : 'Meditate & journal', done: journaledToday, icon: Brain, accent: '#a78bfa' },
-    { label: 'Trade — pre-market check & plan', icon: TrendingUp, href: '/trading', accent: '#fbbf24' },
-  ]
-  if (ideasReady) items.push({ label: `Post content — ${ideasReady} idea${ideasReady > 1 ? 's' : ''} ready`, href: '/content', icon: Clapperboard, accent: '#34d399' })
-  if (newLeads) items.push({ label: `Respond to ${newLeads} new lead${newLeads > 1 ? 's' : ''}`, href: '/business', icon: UserPlus, accent: '#60a5fa' })
-  if (activeClients) items.push({ label: `Check in with clients — ${activeClients} active`, href: '/business', icon: Users, accent: '#22d3ee' })
-  for (const t of tasks) items.push({ label: t.title, icon: ListChecks })
+  const focus = cfg?.value || 'Become the man capable of creating everything else.'
+  // Forward-looking: current block + what's still ahead today.
+  const upcoming = sched.blocks.filter(b => b.end_min > sched.nowMin).slice(0, 7)
 
   return (
-    <div className="page-pad" style={{ maxWidth: 1180, margin: '0 auto' }}>
+    <div className="page-pad" style={{ maxWidth: 760, margin: '0 auto' }}>
       {/* Greeting */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <Sunrise size={22} color="var(--accent)" />
-        <h1 style={{ fontSize: 25, fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>{greeting}, Kaleb</h1>
-      </div>
-      <div style={{ color: 'var(--muted)', fontSize: 13.5, marginBottom: 22 }}>{dateStr} · here&apos;s what matters today.</div>
+      <h1 style={{ fontSize: 27, fontWeight: 800, letterSpacing: '-0.02em', margin: '2px 0 8px' }}>{greeting}, Kaleb 👋</h1>
+      <p style={{ color: 'var(--foreground-2)', fontSize: 13.5, lineHeight: 1.55, margin: '0 0 20px' }}>
+        Protect the morning. Build in the afternoon. Share in the evening. Reflect before sleep.
+      </p>
 
-      {/* Row 1: Today + Rituals */}
-      <div className="dash-row two">
-        <Card title="TODAY" accent="var(--accent)">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {items.map((it, i) => {
-              const Inner = (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 6px', borderRadius: 8 }}>
-                  {it.done ? <CheckCircle2 size={17} color="var(--green)" /> : <Circle size={17} color={it.accent ?? 'var(--muted)'} />}
-                  <span style={{ flex: 1, fontSize: 14, color: it.done ? 'var(--muted)' : 'var(--foreground)', textDecoration: it.done ? 'line-through' : 'none' }}>{it.label}</span>
-                  {it.href && <ArrowUpRight size={14} color="var(--muted)" />}
+      {/* Today's Focus */}
+      <div className="card2" style={{ marginBottom: 14 }}>
+        <div className="section-label" style={{ marginBottom: 8 }}>Today&apos;s Focus</div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--foreground)', lineHeight: 1.4 }}>{focus}</div>
+      </div>
+
+      {/* Stat tiles */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 24 }}>
+        <div className="stat-tile">
+          <div className="stat-num" style={{ color: 'var(--accent)' }}>{consistency.pct}%</div>
+          <div className="stat-cap">Consistency</div>
+          <div className="stat-sub">{consistency.streak} day streak</div>
+        </div>
+        <div className="stat-tile">
+          <div className="stat-num" style={{ color: 'var(--foreground)' }}>{taskCount ?? 0}</div>
+          <div className="stat-cap">Tasks</div>
+          <div className="stat-sub">Today</div>
+        </div>
+        <div className="stat-tile">
+          <div className="stat-num" style={{ color: 'var(--green)' }}>{rev ? money(rev.thisMonth) : '—'}</div>
+          <div className="stat-cap">Cash In</div>
+          <div className="stat-sub">This month</div>
+        </div>
+      </div>
+
+      {/* Today's Schedule */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span className="section-label">Today&apos;s Schedule</span>
+        <Link href="/schedule" style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>
+          Full day <ChevronRight size={13} />
+        </Link>
+      </div>
+
+      {upcoming.length === 0 ? (
+        <div className="card2" style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Day complete — rest well.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {upcoming.map(b => {
+            const color = PILLAR_COLORS[b.pillar] ?? 'var(--muted)'
+            const isNow = sched.current?.id === b.id
+            return (
+              <Link key={b.id} href="/schedule" style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px',
+                background: isNow ? 'var(--accent-dim)' : 'var(--surface)',
+                border: `1px solid ${isNow ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 14,
+              }}>
+                <div className="tl-bar" style={{ background: color, minHeight: 34 }} />
+                <div style={{ minWidth: 62, fontSize: 12, fontWeight: 700, color: isNow ? 'var(--accent)' : 'var(--foreground-2)' }}>{fmtClock(b.start_min)}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--foreground)' }}>{b.title}{b.theme ? <span style={{ color, fontWeight: 600 }}> · {b.theme}</span> : null}</div>
+                  {b.detail && <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.4, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.detail}</div>}
                 </div>
-              )
-              return it.href
-                ? <Link key={i} href={it.href} style={{ textDecoration: 'none' }} className="row-hover">{Inner}</Link>
-                : <div key={i}>{Inner}</div>
-            })}
-          </div>
-        </Card>
-
-        <Card title="RITUALS" accent="#a78bfa">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <Brain size={15} color="#a78bfa" />
-            <span style={{ fontSize: 14, fontWeight: 600 }}>Meditation & journal</span>
-          </div>
-          <JournalBox doneToday={journaledToday} />
-        </Card>
-      </div>
-
-      {/* Row 2: Content / Clients / Revenue */}
-      <div className="dash-row three">
-        {/* Content */}
-        <Card title="CONTENT READY" accent="#34d399" href="/content">
-          {ideasReady === 0 && <Empty>No ideas queued — generate some.</Empty>}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {(ideas ?? []).slice(0, 4).map(i => {
-              const b = brandById.get(i.brand_id)
-              return (
-                <div key={i.id} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: BRAND_DOT[b?.slug ?? ''] ?? 'var(--muted)', marginTop: 6, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12.5, color: 'var(--foreground-2)', lineHeight: 1.4 }}>{i.angle || i.title}</span>
-                </div>
-              )
-            })}
-          </div>
-          {typeof scriptCount === 'number' && scriptCount > 0 && (
-            <div style={{ marginTop: 12, fontSize: 11.5, color: 'var(--muted)' }}>+ {scriptCount} script{scriptCount > 1 ? 's' : ''} drafted</div>
-          )}
-        </Card>
-
-        {/* Clients */}
-        <Card title="CLIENTS" accent="#22d3ee" href="/business">
-          <div style={{ display: 'flex', gap: 20, marginBottom: 14 }}>
-            <Stat value={String(activeClients)} label="ACTIVE" />
-            <Stat value={String(newLeads)} label="NEW LEADS" accent={newLeads ? 'var(--accent)' : undefined} />
-          </div>
-          {clientNames.length > 0 && (
-            <div style={{ fontSize: 12.5, color: 'var(--foreground-2)', lineHeight: 1.6 }}>
-              {clientNames.join(' · ')}{activeClients > clientNames.length ? ' …' : ''}
-            </div>
-          )}
-          {recentLeads.length > 0 && (
-            <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--accent)' }}>
-              New: {recentLeads.map(l => l.business_name).join(', ')}
-            </div>
-          )}
-        </Card>
-
-        {/* Revenue */}
-        <Card title="REVENUE · CFO" accent="#34d399" href="/business">
-          {!rev && <Empty>Ledger not connected.</Empty>}
-          {rev && (
-            <>
-              <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 2 }}>{money(rev.cashIn)}</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14 }}>CASH RECEIVED · ALL-TIME</div>
-              <div style={{ display: 'flex', gap: 20 }}>
-                <Stat value={money(rev.thisMonth)} label="THIS MONTH" accent="var(--green)" />
-                <Stat value={money(rev.outstanding)} label="OUTSTANDING" accent={rev.outstanding ? 'var(--yellow)' : undefined} />
-              </div>
-            </>
-          )}
-        </Card>
-      </div>
-
-      {/* Shortcuts */}
-      <div style={{ marginTop: 24, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <Shortcut href="https://www.dryphub.com" label="DRYP Hub" external icon={ExternalLink} />
-        <Shortcut href="https://dryp-ledger.vercel.app" label="DRYP Ledger" external icon={DollarSign} />
-        <Shortcut href="/content" label="Content Engine" icon={Clapperboard} />
-        <Shortcut href="/business" label="Business" icon={Users} />
-        <Shortcut href="/trading" label="Trading" icon={TrendingUp} />
-      </div>
+                <span className="pillar-tag" style={{ color, background: `${color}1f` }}>{b.pillar}</span>
+              </Link>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
-}
-
-// ── small presentational helpers ──
-function Card({ title, accent, href, children }: { title: string; accent: string; href?: string; children: React.ReactNode }) {
-  const head = (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: accent }}>{title}</span>
-      {href && <ArrowUpRight size={14} color="var(--muted)" />}
-    </div>
-  )
-  const body = (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 18, height: '100%', boxSizing: 'border-box' }}>
-      {head}{children}
-    </div>
-  )
-  return href && href.startsWith('/') ? <Link href={href} style={{ textDecoration: 'none', display: 'block', height: '100%' }}>{body}</Link> : body
-}
-function Stat({ value, label, accent }: { value: string; label: string; accent?: string }) {
-  return (
-    <div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: accent ?? 'var(--foreground)', letterSpacing: '-0.01em' }}>{value}</div>
-      <div style={{ fontSize: 9.5, color: 'var(--muted)', letterSpacing: '0.06em', marginTop: 1 }}>{label}</div>
-    </div>
-  )
-}
-function Empty({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{children}</div>
-}
-function Shortcut({ href, label, icon: Icon, external }: { href: string; label: string; icon: React.ElementType; external?: boolean }) {
-  const style: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 7, padding: '8px 14px',
-    background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10,
-    fontSize: 13, color: 'var(--foreground-2)', textDecoration: 'none',
-  }
-  const inner = <><Icon size={14} color="var(--accent)" />{label}</>
-  return external
-    ? <a href={href} target="_blank" rel="noopener noreferrer" style={style}>{inner}</a>
-    : <Link href={href} style={style}>{inner}</Link>
 }

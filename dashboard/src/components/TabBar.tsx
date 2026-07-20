@@ -1,9 +1,9 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Sparkles, Home, LayoutGrid, Clapperboard, Briefcase, CalendarDays } from 'lucide-react'
+import { Sparkles, Home, CalendarDays, BookOpen, MoreHorizontal } from 'lucide-react'
 
-type Tab = { href: string; label: string; icon: React.ElementType; badge?: number }
+type Tab = { href: string; label: string; icon: React.ElementType; badge?: number; match?: string }
 
 export default function TabBar({
   approvalCount = 0,
@@ -13,25 +13,21 @@ export default function TabBar({
   taskCount?: number
 }) {
   const pathname = usePathname()
-
-  // No tab bar on the login screen
   if (pathname?.startsWith('/login')) return null
 
   const tabs: Tab[] = [
-    { href: '/', label: 'Atlas', icon: Sparkles },
-    { href: '/dashboard', label: 'Today', icon: Home },
+    { href: '/dashboard', label: 'Home', icon: Home },
     { href: '/schedule', label: 'Schedule', icon: CalendarDays },
-    { href: '/apps', label: 'Apps', icon: LayoutGrid, badge: approvalCount + taskCount },
-    { href: '/content', label: 'Content', icon: Clapperboard },
-    { href: '/business', label: 'Business', icon: Briefcase },
+    { href: '/', label: 'Atlas', icon: Sparkles },
+    { href: '/feeling', label: 'Journal', icon: BookOpen },
+    { href: '/apps', label: 'More', icon: MoreHorizontal, badge: approvalCount + taskCount },
   ]
 
   return (
     <nav className="ios-tabbar">
       {tabs.map(tab => {
         const Icon = tab.icon
-        const active =
-          tab.href === '/' ? pathname === '/' : pathname?.startsWith(tab.href)
+        const active = tab.href === '/' ? pathname === '/' : pathname?.startsWith(tab.href)
         return (
           <Link key={tab.href} href={tab.href} className={`ios-tab${active ? ' active' : ''}`}>
             {tab.badge != null && tab.badge > 0 && (
