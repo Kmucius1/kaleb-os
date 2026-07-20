@@ -1,19 +1,14 @@
 import { supabase } from "./supabase";
+import { TZ, PILLAR_COLORS, fmtClock } from "./clock";
 
 // The schedule engine: resolves today's rhythm in Kaleb's timezone (ET),
 // merges the recurring template with one-off events, and tells you (and Atlas)
 // exactly which block he's in right now.
 
-export const TZ = "America/New_York";
-
-export const PILLAR_COLORS: Record<string, string> = {
-  Spirit: "#a78bfa",
-  Mind: "#60a5fa",
-  Body: "#34d399",
-  Money: "#fbbf24",
-  Mission: "#fb923c",
-  Relationships: "#f472b6",
-};
+// Re-exported from ./clock (pure, client-safe) so existing @/lib/schedule
+// imports keep working while the live home timeline can import them without
+// pulling in the Supabase client.
+export { TZ, PILLAR_COLORS, fmtClock };
 
 export type Block = {
   id: string;
@@ -64,14 +59,6 @@ export function dayTypeOf(dow: number): string {
   if (dow === 0) return "sunday";
   if (dow === 6) return "saturday";
   return "weekday";
-}
-
-export function fmtClock(min: number): string {
-  const h = Math.floor(min / 60) % 24;
-  const m = min % 60;
-  const ampm = h < 12 ? "AM" : "PM";
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
 async function getConfig(keys: string[]): Promise<Record<string, any>> {

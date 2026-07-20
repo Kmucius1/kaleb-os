@@ -1,11 +1,10 @@
 import { supabase } from '@/lib/supabase'
 import { getRevenueSnapshot } from '@/lib/ledger'
-import { getTodaySchedule, fmtClock, PILLAR_COLORS } from '@/lib/schedule'
-import { blockIcon } from '@/lib/blockIcon'
+import { getTodaySchedule } from '@/lib/schedule'
 import Sparkline from '@/components/ui/Sparkline'
-import ProgressRing from '@/components/ui/ProgressRing'
+import LiveTimeline from '@/components/LiveTimeline'
 import Link from 'next/link'
-import { Menu, Target, ChevronRight, Zap } from 'lucide-react'
+import { Menu, Target, Zap } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,16 +42,6 @@ export default async function Home() {
   const focus = conf.north_star || 'Become the man capable of creating everything else.'
   const reminder = conf.daily_reminder || 'Discipline today = freedom tomorrow.'
 
-  const cur = s.current
-  const curColor = cur ? (PILLAR_COLORS[cur.pillar] ?? 'var(--accent)') : 'var(--accent)'
-  const remainMin = cur ? cur.end_min - s.nowMin : 0
-  const elapsedPct = cur ? ((s.nowMin - cur.start_min) / (cur.end_min - cur.start_min)) * 100 : 0
-  const remainLabel = remainMin >= 60 ? `${Math.floor(remainMin / 60)}h ${remainMin % 60}m` : `${remainMin}m`
-  const CurIcon = cur ? blockIcon(cur.title) : Target
-  const nxt = s.next
-  const NxtIcon = nxt ? blockIcon(nxt.title) : Target
-  const nxtColor = nxt ? (PILLAR_COLORS[nxt.pillar] ?? 'var(--muted)') : 'var(--muted)'
-
   return (
     <div style={{ maxWidth: 520, margin: '0 auto', padding: '18px 16px 32px' }}>
       {/* Header */}
@@ -66,42 +55,8 @@ export default async function Home() {
         <p style={{ color: 'var(--foreground-2)', fontSize: 14, lineHeight: 1.5, margin: '8px 0 0' }}>Protect the morning. Build your empire.</p>
       </div>
 
-      {/* Current block — the operating timeline centerpiece */}
-      {cur ? (
-        <div className="pcard glow rise rise-2" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="label" style={{ marginBottom: 10 }}>Current Block</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <span className="grad-icon breathe" style={{ width: 34, height: 34, background: `${curColor}22`, borderRadius: 11 }}><CurIcon size={18} color={curColor} /></span>
-              <span className="h-title" style={{ color: 'var(--foreground)' }}>{cur.title}</span>
-            </div>
-            <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{fmtClock(cur.start_min)} – {fmtClock(cur.end_min)}</div>
-            {cur.detail && <div style={{ fontSize: 12.5, color: 'var(--foreground-2)', marginTop: 6, lineHeight: 1.4 }}>{cur.detail}</div>}
-          </div>
-          <ProgressRing pct={elapsedPct} color={curColor} size={104}>
-            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--foreground)' }}>{remainLabel}</div>
-            <div style={{ fontSize: 9.5, color: 'var(--muted)', letterSpacing: '0.08em' }}>REMAINING</div>
-          </ProgressRing>
-        </div>
-      ) : (
-        <div className="pcard rise rise-2" style={{ marginBottom: 12 }}>
-          <div className="label" style={{ marginBottom: 8 }}>Open Window</div>
-          <div style={{ fontSize: 15, color: 'var(--foreground-2)' }}>Between blocks — breathe, or get ahead.</div>
-        </div>
-      )}
-
-      {/* Up next */}
-      {nxt && (
-        <Link href="/schedule" className="pcard press rise rise-3" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span className="grad-icon" style={{ width: 38, height: 38, background: `${nxtColor}1c`, borderRadius: 12 }}><NxtIcon size={19} color={nxtColor} /></span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="label" style={{ marginBottom: 4 }}>Up Next</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--foreground)' }}>{nxt.title}</div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>{fmtClock(nxt.start_min)} – {fmtClock(nxt.end_min)}</div>
-          </div>
-          <ChevronRight size={18} color="var(--muted)" />
-        </Link>
-      )}
+      {/* Current block + Up Next — live, ticks every second (client) */}
+      <LiveTimeline initialBlocks={s.blocks} />
 
       {/* Today's focus */}
       <div className="pcard rise rise-4" style={{ marginBottom: 20 }}>

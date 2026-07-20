@@ -6,6 +6,7 @@ import { logIdea, logContentIdea, addJournal, addTask, logTrade, logProject, upd
 import { getTradingSnapshot } from "./tradeprint";
 import { getProjects } from "./github";
 import { getTodaySchedule, fmtClock } from "./schedule";
+import { sendPushToAll } from "./push";
 
 // Persona + what Kaleb OS knows about Kaleb — injected into the assistant's system prompt.
 export async function getContext(): Promise<{ persona: string; profile: string[] }> {
@@ -189,10 +190,23 @@ async function runTool(name: string, args: Record<string, unknown>): Promise<unk
         location: (args.location as string) ?? null,
         note: (args.note as string) ?? null,
         pillar: (args.pillar as string) ?? null,
+        notify: true, // so the tick cron also reminds him at start time
         source: "atlas",
       };
       const { data, error } = await supabase.from("schedule_events").insert(row).select().single();
-      return error ? { error: error.message } : { ok: true, event: { title: data.title, date: data.event_date, at: data.start_min != null ? fmtClock(data.start_min) : "all day" } };
+      if (error) return { error: error.message };
+      // Immediate confirmation push — "something came up in your schedule".
+      const when = data.start_min != null ? fmtClock(data.start_min) : "all day";
+      const dayTag = String(data.event_date) === new Date().toISOString().slice(0, 10) ? "today" : data.event_date;
+      try {
+        await sendPushToAll({
+          title: "🗓️ Added to your schedule",
+          body: `${data.title} — ${dayTag}${data.start_min != null ? ` at ${when}` : ""}.`,
+          url: "/schedule",
+          tag: "schedule-update",
+        });
+      } catch { /* push is best-effort; the event is already saved */ }
+      return { ok: true, event: { title: data.title, date: data.event_date, at: when } };
     }
     case "tune_atlas": {
       const { data: cfg } = await supabase.from("kalebos_config").select("value").eq("key", "persona").maybeSingle();
