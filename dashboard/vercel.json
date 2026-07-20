@@ -2,6 +2,7 @@
   "buildCommand": "NEXT_ADAPTER_PATH= next build",
   "crons": [
     { "path": "/api/cron/morning-brief", "schedule": "30 13 * * *" },
+    { "path": "/api/cron/evening-review", "schedule": "0 1 * * *" },
     { "path": "/api/cron/tick", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/plaud", "schedule": "*/30 * * * *" },
     { "path": "/api/cron/scout", "schedule": "0 13 * * *" }

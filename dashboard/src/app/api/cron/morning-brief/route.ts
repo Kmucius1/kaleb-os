@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { chat, LLM_MODEL } from "@/lib/llm";
 import { syncClientBrands } from "@/lib/crm-sync";
 import { sendPushToAll, claimOnce } from "@/lib/push";
+import { generateMorningBrief } from "@/lib/briefing";
 
 // Vercel Cron hits this daily. Also runnable manually with the same bearer.
 export const dynamic = "force-dynamic";
@@ -67,15 +68,18 @@ export async function GET(request: Request) {
     if (rows.length) { try { await supabase.from("content_ideas").insert(rows); } catch (e) { log.save_error = (e as Error).message; } }
   }
 
-  // 5. Phone push (once per day) — the morning brief lands on Kaleb's lock screen.
-  //    (Delivery is push + the saved ideas on /content — the old Telegram path is gone.)
+  // 5. Generate the structured Daily Briefing (schedule + tasks + CRM + weather → Atlas).
+  let brief: { headline?: string | null; top3?: string[] | null } | null = null;
+  try { brief = await generateMorningBrief(); } catch (e) { log.brief_error = (e as Error).message; }
+
+  // 6. Phone push (once per day) — the morning brief lands on Kaleb's lock screen.
   try {
     if (await claimOnce("brief", "morning", "Morning brief")) {
-      const n = ideas.length;
+      const top1 = brief?.top3?.[0];
       const push = await sendPushToAll({
         title: "☀️ Good morning, Kaleb",
-        body: n ? `${n} fresh content idea${n > 1 ? "s" : ""} + today's priorities are ready.` : "Today's priorities are ready.",
-        url: "/dashboard", tag: "brief",
+        body: brief?.headline || (top1 ? `Today's #1: ${top1}` : "Your daily briefing is ready."),
+        url: "/daily-brief", tag: "brief",
       });
       log.push = push;
     }
