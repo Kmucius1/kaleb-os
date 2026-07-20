@@ -5,7 +5,7 @@
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-export const LLM_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-4.6";
+export const LLM_MODEL = process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash";
 
 type Msg = { role: "system" | "user" | "assistant"; content: string };
 
