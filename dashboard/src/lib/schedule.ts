@@ -105,6 +105,45 @@ export async function getTodaySchedule(date = new Date()): Promise<TodaySchedule
   return { dayType, dow, dateStr, nowMin: minutes, blocks, events: eventsRes.data ?? [], current, next };
 }
 
+// Day-of-week (0=Sun) for a plain ET calendar date "YYYY-MM-DD". Noon-UTC keeps
+// us clear of any timezone edge around midnight.
+export function dowOfDateStr(dateStr: string): number {
+  return new Date(`${dateStr}T12:00:00Z`).getUTCDay();
+}
+
+export type DaySchedule = {
+  dateStr: string;
+  dow: number;
+  dayType: string;
+  blocks: Block[];
+  events: SchedEvent[];
+  completed: string[]; // ref_ids (blocks + events) checked off on this date
+};
+
+// Full schedule for an arbitrary ET date, with the check-offs recorded for it.
+// Powers the schedule page's day navigation (any past/future day).
+export async function getScheduleForDate(dateStr: string): Promise<DaySchedule> {
+  const dow = dowOfDateStr(dateStr);
+  const dayType = dayTypeOf(dow);
+  const [blocksRes, eventsRes, compRes, cfg] = await Promise.all([
+    supabase.from("schedule_blocks").select("*").eq("day_type", dayType).order("start_min"),
+    supabase.from("schedule_events").select("*").eq("event_date", dateStr).order("start_min", { nullsFirst: true }),
+    supabase.from("completions").select("ref_id").eq("done_date", dateStr),
+    getConfig(["commute_themes", "study_rotation", "content_themes"]),
+  ]);
+  const blocks: Block[] = (blocksRes.data ?? []).map((b: any) => ({ ...b, theme: resolveTheme(b.rotates, dow, cfg) }));
+  const completed = (compRes.data ?? []).map((c: any) => c.ref_id as string);
+  return { dateStr, dow, dayType, blocks, events: eventsRes.data ?? [], completed };
+}
+
+// How many template blocks a given day-type has (denominator for adherence %).
+export async function blockCountsByDayType(): Promise<Record<string, number>> {
+  const { data } = await supabase.from("schedule_blocks").select("day_type");
+  const out: Record<string, number> = { weekday: 0, saturday: 0, sunday: 0 };
+  for (const r of data ?? []) out[(r as any).day_type] = (out[(r as any).day_type] ?? 0) + 1;
+  return out;
+}
+
 // Compact live schedule context injected into Atlas's system prompt every turn.
 export async function getScheduleContext(): Promise<string> {
   const s = await getTodaySchedule();

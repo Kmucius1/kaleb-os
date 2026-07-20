@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { getRevenueSnapshot } from '@/lib/ledger'
 import { getTodaySchedule } from '@/lib/schedule'
+import { getConsistencyTrend } from '@/lib/consistency'
 import Sparkline from '@/components/ui/Sparkline'
 import LiveTimeline from '@/components/LiveTimeline'
 import Link from 'next/link'
@@ -10,21 +11,6 @@ export const dynamic = 'force-dynamic'
 
 const money = (n: number) => '$' + Math.round(n).toLocaleString()
 const etHour = () => Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(new Date())) % 24
-const dayKey = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d)
-
-async function getMomentum(): Promise<{ pct: number; streak: number; series: number[] }> {
-  const today = new Date()
-  const { data } = await supabase.from('journal').select('entry_date').gte('entry_date', dayKey(new Date(today.getTime() - 13 * 86400000)))
-  const days = new Set((data ?? []).map((r: any) => r.entry_date))
-  const last7 = Array.from({ length: 7 }, (_, i) => dayKey(new Date(today.getTime() - i * 86400000)))
-  const pct = Math.round((last7.filter(d => days.has(d)).length / 7) * 100)
-  let streak = 0
-  for (let i = 0; i < 90; i++) { if (days.has(dayKey(new Date(today.getTime() - i * 86400000)))) streak++; else if (i > 0) break }
-  // 14-day cumulative entries → smooth upward momentum line.
-  let cum = 0
-  const series = Array.from({ length: 14 }, (_, i) => { if (days.has(dayKey(new Date(today.getTime() - (13 - i) * 86400000)))) cum++; return cum })
-  return { pct, streak, series }
-}
 
 export default async function Home() {
   const h = etHour()
@@ -32,7 +18,7 @@ export default async function Home() {
 
   const [s, mom, { count: taskCount }, { data: tasks }, rev, { data: cfg }] = await Promise.all([
     getTodaySchedule(),
-    getMomentum(),
+    getConsistencyTrend(14),
     supabase.from('tasks').select('id', { count: 'exact', head: true }).in('status', ['pending', 'in_progress']),
     supabase.from('tasks').select('title').in('status', ['pending', 'in_progress']).order('priority', { ascending: false }).limit(3),
     getRevenueSnapshot().catch(() => null),
@@ -68,11 +54,11 @@ export default async function Home() {
 
       {/* Stat tiles */}
       <div className="rise rise-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
-        <div className="stat-tile" style={{ padding: '14px 14px 10px' }}>
-          <div className="stat-num" style={{ color: 'var(--green)' }}>{mom.pct}%</div>
+        <Link href="/consistency" className="stat-tile press" style={{ padding: '14px 14px 10px', textDecoration: 'none' }}>
+          <div className="stat-num" style={{ color: 'var(--green)' }}>{mom.today.score}%</div>
           <div className="stat-cap">Consistency</div>
-          <div style={{ marginTop: 8, marginLeft: -2 }}><Sparkline data={mom.series} color="var(--green)" width={90} height={26} /></div>
-        </div>
+          <div style={{ marginTop: 8, marginLeft: -2 }}><Sparkline data={mom.series.map(p => p.score)} color="var(--green)" width={90} height={26} /></div>
+        </Link>
         <div className="stat-tile" style={{ padding: '14px' }}>
           <div className="stat-num">{taskCount ?? 0}</div>
           <div className="stat-cap">Tasks</div>

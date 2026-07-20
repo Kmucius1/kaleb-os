@@ -16,7 +16,11 @@ export default function SpaceBar({ current }: { current: Space }) {
   const router = useRouter()
   const [space, setSpace] = useState<Space>(current)
 
-  if (pathname === '/' || pathname?.startsWith('/login')) return null
+  // Only meaningful on the space-aware surfaces (agency ⇄ personal views).
+  // Everywhere else — home, schedule, journal, etc. — it did nothing, so hide it.
+  const SPACE_ROUTES = ['/business', '/content', '/apps']
+  const onSpaceRoute = SPACE_ROUTES.some(r => pathname === r || pathname?.startsWith(r + '/'))
+  if (!onSpaceRoute) return null
 
   function choose(next: Space) {
     if (next === space) return

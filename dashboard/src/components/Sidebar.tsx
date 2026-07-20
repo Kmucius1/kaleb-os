@@ -5,7 +5,7 @@ import {
   LayoutDashboard, FileText, CheckCircle2, CheckSquare, Target, FolderOpen,
   Lightbulb, Inbox, Brain, Users, TrendingUp, BarChart2, Briefcase, Star,
   Calendar, Zap, Link2, ScrollText, Settings, Wallet, Clapperboard, Sparkles, LayoutGrid,
-  ShoppingBag, CalendarDays, CircleCheckBig, LineChart,
+  ShoppingBag, CalendarDays, CircleCheckBig, LineChart, Flame,
 } from 'lucide-react'
 
 type NavItem = { href: string; label: string; icon: React.ElementType; badge?: number }
@@ -41,6 +41,7 @@ const buildNav = (approvalCount: number, taskCount: number): NavSection[] => [
     items: [
       { href: '/tasks', label: 'Tasks', icon: CheckSquare, badge: taskCount },
       { href: '/habits', label: 'Habits', icon: CircleCheckBig },
+      { href: '/consistency', label: 'Consistency', icon: Flame },
       { href: '/goals', label: 'Goals', icon: Target },
       { href: '/projects', label: 'Projects', icon: FolderOpen },
       { href: '/ideas', label: 'Ideas', icon: Lightbulb },
