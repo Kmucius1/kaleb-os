@@ -6,6 +6,7 @@ import {
   Sparkles, Home, FileText, CheckCircle2, CheckSquare, Target, FolderOpen,
   Lightbulb, Inbox, Brain, Users, TrendingUp, BarChart2, Briefcase, Star,
   Calendar, Zap, Link2, ScrollText, Settings, Wallet, Clapperboard, HeartPulse,
+  CalendarDays,
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -30,6 +31,7 @@ export default async function AppsPage() {
       apps: [
         { href: '/', label: 'Atlas', icon: Sparkles, color: 'linear-gradient(135deg,#6366f1,#22d3ee)' },
         { href: '/dashboard', label: 'Today', icon: Home, color: 'linear-gradient(135deg,#0ea5e9,#22d3ee)' },
+        { href: '/schedule', label: 'Schedule', icon: CalendarDays, color: 'linear-gradient(135deg,#8b5cf6,#c084fc)' },
         { href: '/feeling', label: 'Feeling', icon: HeartPulse, color: 'linear-gradient(135deg,#ec4899,#f472b6)' },
         { href: '/daily-brief', label: 'Brief', icon: FileText, color: 'linear-gradient(135deg,#64748b,#94a3b8)' },
         { href: '/approvals', label: 'Approvals', icon: CheckCircle2, color: 'linear-gradient(135deg,#f59e0b,#fbbf24)', badge: ac },
