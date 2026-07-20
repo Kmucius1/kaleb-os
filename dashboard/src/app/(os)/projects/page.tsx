@@ -37,9 +37,9 @@ export default async function ProjectsPage() {
 
   if (projects.length === 0) {
     return (
-      <div className="page-pad" style={{ maxWidth: 1000, margin: '0 auto' }}>
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '18px 16px 40px' }}>
         <Header count={0} />
-        <div className="card2" style={{ textAlign: 'center', padding: '48px 24px' }}>
+        <div className="pcard rise rise-2" style={{ textAlign: 'center', padding: '48px 24px' }}>
           <div style={{ color: 'var(--foreground-2)', fontSize: 14, marginBottom: 8 }}>No repos loaded</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
             Set <code style={{ color: 'var(--accent)' }}>GITHUB_TOKEN</code> in the environment to pull your GitHub portfolio.
@@ -65,11 +65,11 @@ export default async function ProjectsPage() {
   const liveCount = projects.filter(p => p.status === 'live').length
 
   return (
-    <div className="page-pad" style={{ maxWidth: 1000, margin: '0 auto' }}>
+    <div style={{ maxWidth: 960, margin: '0 auto', padding: '18px 16px 40px' }}>
       <Header count={projects.length} />
 
       {/* glanceable overview */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 28 }}>
+      <div className="rise rise-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 28 }}>
         {[
           { label: 'Working Now', value: activeCount, color: 'var(--green)' },
           { label: 'Live', value: liveCount, color: '#60a5fa' },
@@ -83,18 +83,18 @@ export default async function ProjectsPage() {
         ))}
       </div>
 
-      {GROUPS.map(g => {
+      {GROUPS.map((g, gi) => {
         const list = byGroup.get(g.key)
         if (!list || list.length === 0) return null
         return (
-          <div key={g.key} style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 13 }}>{g.emoji}</span>
-              <span className="section-label" style={{ color: g.color }}>{g.title}</span>
-              <span style={{ fontSize: 10, color: 'var(--muted)' }}>{list.length}</span>
+          <div key={g.key} className={`rise rise-${Math.min(7, gi + 3)}`} style={{ marginBottom: 30 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
+              <span className="grad-icon" style={{ width: 28, height: 28, borderRadius: 9, background: `color-mix(in srgb, ${g.color} 16%, transparent)`, fontSize: 13 }}>{g.emoji}</span>
+              <span className="label" style={{ color: g.color }}>{g.title}</span>
+              <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700 }}>{list.length}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: 12 }}>
-              {list.map(p => <Card key={p.repo} p={p} />)}
+              {list.map(p => <Card key={p.repo} p={p} color={g.color} />)}
             </div>
           </div>
         )
@@ -105,20 +105,21 @@ export default async function ProjectsPage() {
 
 function Header({ count }: { count: number }) {
   return (
-    <div style={{ marginBottom: 24 }}>
-      <h1 style={{ fontSize: 27, fontWeight: 800, letterSpacing: '-0.02em', margin: '2px 0 4px' }}>Projects</h1>
-      <p style={{ color: 'var(--foreground-2)', fontSize: 13.5, margin: 0 }}>{count} repos · GitHub @Kmucius1</p>
+    <div className="rise rise-1" style={{ marginBottom: 22 }}>
+      <h1 className="h-hero" style={{ margin: 0 }}>Projects</h1>
+      <p style={{ color: 'var(--foreground-2)', fontSize: 14, lineHeight: 1.5, margin: '8px 0 0' }}>{count} repos · GitHub @Kmucius1</p>
     </div>
   )
 }
 
-function Card({ p }: { p: Project }) {
+function Card({ p, color }: { p: Project; color: string }) {
   return (
-    <div className="card2" style={{ padding: 14, borderRadius: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="pcard press" style={{ padding: '14px 15px 14px 16px', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', overflow: 'hidden' }}>
+      <span style={{ position: 'absolute', left: 0, top: 10, bottom: 10, width: 3.5, borderRadius: 4, background: color }} />
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <a href={p.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', minWidth: 0 }}>
           <span title={p.activity} style={{ width: 7, height: 7, borderRadius: '50%', background: ACTIVITY_DOT[p.activity], flexShrink: 0 }} />
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
           {p.isPrivate ? <Lock size={10} color="var(--muted)" /> : <Globe size={10} color="var(--muted)" />}
         </a>
         <ProjectStatusSelect repo={p.repo} value={p.status} />

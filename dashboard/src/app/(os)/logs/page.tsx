@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { ScrollText } from 'lucide-react'
+import { ScrollText, Zap, Radio } from 'lucide-react'
 import { formatTime } from '@/lib/utils'
 
 export const revalidate = 30
@@ -16,31 +16,33 @@ export default async function LogsPage() {
   ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 80)
 
   return (
-    <div className="page-pad" style={{ maxWidth: 1000, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
-        <ScrollText size={20} color="var(--accent)" />
-        <h1 style={{ color: 'var(--foreground)', fontWeight: 800, fontSize: 25, letterSpacing: '-0.02em', margin: 0 }}>System Logs</h1>
-        <span style={{ color: 'var(--muted)', fontSize: 12 }}>{feed.length} recent entries</span>
+    <div style={{ maxWidth: 680, margin: '0 auto', padding: '18px 16px 40px' }}>
+      {/* Header */}
+      <div className="rise rise-1" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+        <div>
+          <h1 className="h-hero" style={{ margin: 0, fontSize: 26 }}>System Logs</h1>
+          <p style={{ color: 'var(--foreground-2)', fontSize: 13, margin: '6px 0 0' }}>{feed.length} recent entries</p>
+        </div>
+        <span className="grad-icon" style={{ width: 40, height: 40, background: 'var(--accent-dim)', borderRadius: 13 }}><ScrollText size={19} color="var(--accent)" /></span>
       </div>
 
-      <div className="card2" style={{ padding: '4px 0', overflowX: 'auto' }}>
-        {feed.map((entry, i) => (
-          <div key={i} style={{ display: 'flex', gap: 12, padding: '9px 16px', borderTop: i ? '1px solid var(--border)' : 'none', alignItems: 'baseline' }}>
-            <span style={{ fontSize: 10.5, color: 'var(--muted)', whiteSpace: 'nowrap', minWidth: 110 }}>
-              {formatTime(entry.time)}
-            </span>
-            <span className="pillar-tag" style={{
-              color: entry.type === 'action' ? 'var(--accent)' : 'var(--blue)',
-              background: entry.type === 'action' ? 'var(--accent-dim)' : 'var(--blue-dim)',
-              flexShrink: 0, minWidth: 66, textAlign: 'center',
-            }}>
-              {entry.type.toUpperCase()}
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--foreground-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {entry.label}
-            </span>
-          </div>
-        ))}
+      <div className="pcard rise rise-2" style={{ padding: '4px 6px', overflowX: 'auto' }}>
+        {feed.map((entry, i) => {
+          const isAction = entry.type === 'action'
+          const color = isAction ? 'var(--accent)' : 'var(--blue)'
+          const Icon = isAction ? Zap : Radio
+          return (
+            <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 12px', borderTop: i ? '1px solid var(--border)' : 'none', alignItems: 'center' }}>
+              <span className="grad-icon" style={{ width: 28, height: 28, background: `color-mix(in srgb, ${color} 15%, transparent)`, borderRadius: 9, flexShrink: 0, boxShadow: 'none' }}><Icon size={14} color={color} /></span>
+              <span style={{ fontSize: 10.5, color: 'var(--muted)', whiteSpace: 'nowrap', minWidth: 104 }}>
+                {formatTime(entry.time)}
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--foreground-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {entry.label}
+              </span>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

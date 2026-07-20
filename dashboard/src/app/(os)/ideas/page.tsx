@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { formatTime } from '@/lib/utils'
+import { Lightbulb } from 'lucide-react'
 
 export const revalidate = 120
 
@@ -33,26 +34,28 @@ export default async function IdeasPage() {
   const hasIdeas = all.length > 0
 
   return (
-    <div className="page-pad" style={{ maxWidth: 760, margin: '0 auto' }}>
+    <div style={{ maxWidth: 600, margin: '0 auto', padding: '18px 16px 40px' }}>
       {/* Title */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 0 4px' }}>
-        <h1 style={{ fontSize: 27, fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>Ideas</h1>
-        <span className="pillar-tag" style={{ color: 'var(--accent)', background: 'var(--accent-dim)' }}>Phase 6</span>
+      <div className="rise rise-1" style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h1 className="h-hero" style={{ margin: 0 }}>Ideas</h1>
+          <span className="pillar-tag" style={{ color: 'var(--accent)', background: 'var(--accent-dim)' }}>Phase 6</span>
+        </div>
+        <p style={{ color: 'var(--foreground-2)', fontSize: 14, lineHeight: 1.5, margin: '8px 0 0' }}>
+          {hasIdeas ? `${all.length} ideas captured — content that converts.` : 'Content ideas, surfaced from your captures.'}
+        </p>
       </div>
-      <p style={{ color: 'var(--foreground-2)', fontSize: 13.5, margin: '0 0 20px' }}>
-        {hasIdeas ? `${all.length} ideas captured — content that converts.` : 'Content ideas, surfaced from your captures.'}
-      </p>
 
       {error && (
-        <div className="card2" style={{ color: 'var(--red)', fontSize: 12.5, marginBottom: 16, borderColor: 'var(--red)' }}>
+        <div className="card2 rise rise-2" style={{ color: 'var(--red)', fontSize: 12.5, marginBottom: 16, borderColor: 'var(--red)' }}>
           Error: {error.message}
         </div>
       )}
 
       {!hasIdeas ? (
-        <div className="card2">
-          <div className="section-label" style={{ marginBottom: 8 }}>No Ideas Yet</div>
-          <div style={{ fontSize: 13.5, color: 'var(--foreground)', lineHeight: 1.6, marginBottom: 10 }}>
+        <div className="pcard rise rise-2">
+          <div className="label" style={{ marginBottom: 10 }}>No Ideas Yet</div>
+          <div style={{ fontSize: 14, color: 'var(--foreground)', lineHeight: 1.6, marginBottom: 10 }}>
             Atlas extracts content ideas from captures, voice notes, and emails — drafting posts and tracking which content converts followers into business leads.
           </div>
           <div style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>
@@ -61,18 +64,19 @@ export default async function IdeasPage() {
         </div>
       ) : (
         <>
-          <div className="section-label" style={{ marginBottom: 12 }}>Captured Ideas</div>
+          <div className="label rise rise-2" style={{ margin: '0 4px 12px' }}>Captured Ideas</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {all.map(idea => {
+            {all.map((idea, i) => {
               const color = priorityColor(idea.priority)
               return (
-                <div key={idea.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px',
-                  background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14,
+                <div key={idea.id} className={`pcard press rise rise-${Math.min(7, (i % 6) + 2)}`} style={{
+                  display: 'flex', alignItems: 'center', gap: 13, padding: '13px 15px 13px 13px',
+                  position: 'relative', overflow: 'hidden',
                 }}>
-                  <div className="tl-bar" style={{ background: color, minHeight: 34 }} />
+                  <span style={{ position: 'absolute', left: 0, top: 8, bottom: 8, width: 4, borderRadius: 4, background: color }} />
+                  <span className="grad-icon" style={{ width: 40, height: 40, background: `${color === 'var(--muted)' ? 'var(--surface-3)' : color === 'var(--accent)' ? 'var(--accent-dim)' : 'var(--yellow-dim)'}`, borderRadius: 12, flexShrink: 0 }}><Lightbulb size={19} color={color} /></span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {idea.title}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>

@@ -26,35 +26,37 @@ export default async function BrandWorkspace({ params }: { params: Promise<{ bra
   )
 
   return (
-    <div className="page-pad" style={{ maxWidth: 980, margin: '0 auto' }}>
-      <Link href="/content" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--muted)', fontSize: 12, fontWeight: 600, textDecoration: 'none', marginBottom: 16 }}>
+    <div style={{ maxWidth: 620, margin: '0 auto', padding: '18px 16px 40px' }}>
+      <Link href="/content" className="press rise rise-1" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--muted)', fontSize: 12, fontWeight: 600, textDecoration: 'none', marginBottom: 18 }}>
         <ArrowLeft size={13} /> All brands
       </Link>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22, paddingBottom: 16, borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
-        <span style={{ width: 12, height: 12, borderRadius: '50%', background: accent, boxShadow: `0 0 12px ${accent}` }} />
-        <span style={{ color: 'var(--foreground)', fontWeight: 800, fontSize: 24, letterSpacing: '-0.02em' }}>{brand.name}</span>
+      <div className="rise rise-1" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+        <span className="grad-icon breathe" style={{ width: 40, height: 40, background: `${accent}1c`, borderRadius: 12, flexShrink: 0 }}>
+          <span style={{ width: 12, height: 12, borderRadius: '50%', background: accent, boxShadow: `0 0 12px ${accent}` }} />
+        </span>
+        <span className="h-hero" style={{ color: 'var(--foreground)', fontSize: 24 }}>{brand.name}</span>
         <span className="pillar-tag" style={{ color: accent, background: `${accent}1f` }}>{brand.kind}</span>
         {(brand.default_collab_with ?? []).length > 0 && (
           <span style={{ color: 'var(--muted)', fontSize: 12 }}>collabs w/ {brand.default_collab_with.join(', ')}</span>
         )}
       </div>
 
-      <div style={{ marginBottom: 28 }}>
+      <div className="rise rise-2" style={{ marginBottom: 30 }}>
         <GeneratePanel brandSlug={brand.slug} accent={accent} />
       </div>
 
       {/* SCRIPTS */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <FileText size={14} color={accent} />
-        <span className="section-label" style={{ color: 'var(--foreground)' }}>Scripts</span>
-        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{(scripts ?? []).length}</span>
+      <div className="rise rise-3" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <span className="grad-icon" style={{ width: 34, height: 34, background: `${accent}1c`, borderRadius: 11, flexShrink: 0 }}><FileText size={16} color={accent} /></span>
+        <span className="label">Scripts</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginLeft: 'auto' }}>{(scripts ?? []).length}</span>
       </div>
-      {(scripts ?? []).length === 0 && <div className="card2" style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 28 }}>No scripts yet — generate one above.</div>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
-        {(scripts ?? []).map((s) => (
-          <div key={s.id} className="card2">
+      {(scripts ?? []).length === 0 && <div className="pcard rise rise-3" style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 30 }}>No scripts yet — generate one above.</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 34 }}>
+        {(scripts ?? []).map((s, idx) => (
+          <div key={s.id} className={`pcard rise rise-${Math.min(7, (idx % 4) + 3)}`}>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
               <Badge text={PLATFORM_LABEL[s.platform] ?? s.platform} color={accent} />
               {s.pillar && <Badge text={s.pillar} />}
@@ -62,8 +64,8 @@ export default async function BrandWorkspace({ params }: { params: Promise<{ bra
               {s.collab && <Badge text={`collab: ${(s.collab_with ?? []).join(', ') || 'yes'}`} color="var(--purple)" />}
               <Badge text={s.status} color="var(--yellow)" />
             </div>
-            <div style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: 15.5, marginBottom: 8, lineHeight: 1.35, letterSpacing: '-0.01em' }}>{s.hook}</div>
-            {s.caption && <div style={{ color: 'var(--foreground-2)', fontSize: 13, whiteSpace: 'pre-wrap', marginBottom: 12, lineHeight: 1.5 }}>{s.caption}</div>}
+            <div style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: 16, marginBottom: 8, lineHeight: 1.35, letterSpacing: '-0.01em' }}>{s.hook}</div>
+            {s.caption && <div style={{ color: 'var(--foreground-2)', fontSize: 13, whiteSpace: 'pre-wrap', marginBottom: 12, lineHeight: 1.55 }}>{s.caption}</div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5 }}>
               {s.cta && <div><span style={{ color: 'var(--muted)' }}>CTA: </span><span style={{ color: 'var(--foreground-2)' }}>{s.cta}</span></div>}
               {s.thumbnail_text && <div><span style={{ color: 'var(--muted)' }}>Thumbnail: </span><span style={{ color: accent, fontWeight: 700 }}>{s.thumbnail_text}</span></div>}
@@ -71,7 +73,7 @@ export default async function BrandWorkspace({ params }: { params: Promise<{ bra
             </div>
             {(s.comment_ideas ?? []).length > 0 && (
               <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                <div className="section-label" style={{ marginBottom: 6 }}>Engagement Comments</div>
+                <div className="label" style={{ marginBottom: 8 }}>Engagement Comments</div>
                 {(s.comment_ideas as string[]).map((c, i) => (
                   <div key={i} style={{ color: 'var(--foreground-2)', fontSize: 12.5, marginBottom: 3 }}>• {c}</div>
                 ))}
@@ -79,7 +81,7 @@ export default async function BrandWorkspace({ params }: { params: Promise<{ bra
             )}
             <details style={{ marginTop: 12 }}>
               <summary style={{ color: 'var(--muted)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>Full script / beats</summary>
-              {s.body && <pre style={{ color: 'var(--foreground-2)', fontSize: 12.5, whiteSpace: 'pre-wrap', fontFamily: 'inherit', marginTop: 8, lineHeight: 1.5 }}>{s.body}</pre>}
+              {s.body && <pre style={{ color: 'var(--foreground-2)', fontSize: 12.5, whiteSpace: 'pre-wrap', fontFamily: 'inherit', marginTop: 8, lineHeight: 1.55 }}>{s.body}</pre>}
               {(s.beats ?? null) && (
                 <div style={{ marginTop: 8 }}>
                   {(s.beats as { type: string; text: string }[]).map((bt, i) => (
@@ -96,15 +98,15 @@ export default async function BrandWorkspace({ params }: { params: Promise<{ bra
       </div>
 
       {/* IDEA QUEUE */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <Lightbulb size={14} color={accent} />
-        <span className="section-label" style={{ color: 'var(--foreground)' }}>Idea Queue</span>
-        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{(ideas ?? []).length}</span>
+      <div className="rise rise-3" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <span className="grad-icon" style={{ width: 34, height: 34, background: `${accent}1c`, borderRadius: 11, flexShrink: 0 }}><Lightbulb size={16} color={accent} /></span>
+        <span className="label">Idea Queue</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginLeft: 'auto' }}>{(ideas ?? []).length}</span>
       </div>
-      {(ideas ?? []).length === 0 && <div className="card2" style={{ color: 'var(--muted)', fontSize: 13 }}>No ideas yet.</div>}
+      {(ideas ?? []).length === 0 && <div className="pcard rise rise-3" style={{ color: 'var(--muted)', fontSize: 13 }}>No ideas yet.</div>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {(ideas ?? []).map((i) => (
-          <div key={i.id} className="list-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        {(ideas ?? []).map((i, idx) => (
+          <div key={i.id} className={`pcard press rise rise-${Math.min(7, (idx % 5) + 3)}`} style={{ padding: '13px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ color: 'var(--foreground)', fontSize: 13.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{i.title}</div>
               {i.angle && <div style={{ color: 'var(--muted)', fontSize: 11.5, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{i.angle}</div>}

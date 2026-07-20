@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { getRevenueSnapshot, type RevenueSnapshot } from '@/lib/ledger'
 import { getSpace } from '@/lib/space'
 import InlineSelect from '@/components/InlineSelect'
-import { Briefcase, ExternalLink, Rocket, FolderOpen } from 'lucide-react'
+import { Briefcase, ExternalLink, Rocket, FolderOpen, TrendingUp, Building2, UserRound } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,16 +43,12 @@ async function PersonalBusiness() {
   const openProjects = projects ?? []
 
   return (
-    <div className="page-pad" style={{ maxWidth: 1180, margin: '0 auto' }}>
+    <div style={{ maxWidth: 600, margin: '0 auto', padding: '18px 16px 40px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, paddingBottom: 14, borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
-        <Rocket size={18} color="#6366f1" />
-        <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>Personal</span>
-        <span style={{ color: 'var(--muted)', fontSize: 12 }}>Your ventures &amp; income</span>
-      </div>
+      <PageHeader icon={Rocket} tint="#6366f1" title="Personal" subtitle="Your ventures & income" />
 
       {/* Stats */}
-      <div className="stat-grid" style={{ margin: '0 0 26px' }}>
+      <div className="stat-grid rise rise-2" style={{ margin: '0 0 26px' }}>
         <StatCard label="INCOME / MO" value={totalMtd > 0 ? money(totalMtd) : '—'} accent="var(--green)" sub="across endeavors" />
         <StatCard label="ALL-TIME" value={totalAll > 0 ? money(totalAll) : '—'} accent="var(--purple)" sub="total earned" />
         <StatCard label="ENDEAVORS" value={String(active.length || '—')} accent="var(--cyan)" sub="earning now" />
@@ -61,27 +57,37 @@ async function PersonalBusiness() {
 
       {/* ENDEAVORS — per income stream (mirrors DRYP's per-client view) */}
       <SectionTitle>ENDEAVORS · {money(totalMtd)}/mo</SectionTitle>
-      <div className="card-list">
-        {all.map(h => (
-          <div key={h.id} className="list-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(h.name || '—').trim()}</div>
-                {h.category && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2, textTransform: 'capitalize' }}>{h.category}</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {all.map((h, i) => {
+          const color = ENDEAVOR_COLOR[h.status] ?? '#6b7280'
+          return (
+            <div key={h.id} className={`pcard press rise rise-${Math.min(7, (i % 5) + 3)}`}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 13 }}>
+                <span className="grad-icon" style={{ width: 38, height: 38, background: `${color}1c`, borderRadius: 12, flexShrink: 0 }}>
+                  <TrendingUp size={19} color={color} />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(h.name || '—').trim()}</div>
+                      {h.category && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2, textTransform: 'capitalize' }}>{h.category}</div>}
+                    </div>
+                    <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--green)' }}>{h.revenue_mtd ? money(Number(h.revenue_mtd)) + '/mo' : '—'}</div>
+                      {h.revenue_total ? <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>{money(Number(h.revenue_total))} all-time</div> : null}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--green)' }}>{h.revenue_mtd ? money(Number(h.revenue_mtd)) + '/mo' : '—'}</div>
-                {h.revenue_total ? <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>{money(Number(h.revenue_total))} all-time</div> : null}
+              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span className="pillar-tag" style={{ color, background: `${color}1f`, textTransform: 'capitalize' }}>{h.status || 'active'}</span>
+                {h.description && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{h.description}</span>}
               </div>
             </div>
-            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: ENDEAVOR_COLOR[h.status] ?? 'var(--muted)', background: `${ENDEAVOR_COLOR[h.status] ?? '#6b7280'}1f`, borderRadius: 6, padding: '3px 9px', textTransform: 'capitalize' }}>{h.status || 'active'}</span>
-              {h.description && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{h.description}</span>}
-            </div>
-          </div>
-        ))}
+          )
+        })}
         {all.length === 0 && (
-          <div className="list-card" style={{ color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.5 }}>
+          <div className="pcard" style={{ color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.5 }}>
             No income streams yet. Tell Atlas, e.g. <span style={{ color: 'var(--foreground-2)' }}>&ldquo;my trading made $2k this month&rdquo;</span> or <span style={{ color: 'var(--foreground-2)' }}>&ldquo;add an endeavor: Ka1eb.ai, $500/mo&rdquo;</span> and it&rsquo;ll show up here.
           </div>
         )}
@@ -90,18 +96,22 @@ async function PersonalBusiness() {
       {/* PROJECTS — the things he's actively building */}
       <div style={{ height: 26 }} />
       <SectionTitle>PROJECTS · {openProjects.length} in motion</SectionTitle>
-      <div className="card-list">
-        {openProjects.map(p => (
-          <div key={p.id} className="list-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--foreground)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(p.name || '—').trim()}</div>
-              <FolderOpen size={15} color="#6366f1" style={{ flexShrink: 0 }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {openProjects.map((p, i) => (
+          <div key={p.id} className={`pcard press rise rise-${Math.min(7, (i % 5) + 3)}`}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 13 }}>
+              <span className="grad-icon" style={{ width: 38, height: 38, background: '#6366f11c', borderRadius: 12, flexShrink: 0 }}>
+                <FolderOpen size={19} color="#6366f1" />
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(p.name || '—').trim()}</div>
+                {p.description && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.description}</div>}
+              </div>
             </div>
-            {p.description && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.description}</div>}
           </div>
         ))}
         {openProjects.length === 0 && (
-          <div className="list-card" style={{ color: 'var(--muted)', fontSize: 13.5 }}>
+          <div className="pcard" style={{ color: 'var(--muted)', fontSize: 13.5 }}>
             No active projects. Tell Atlas <span style={{ color: 'var(--foreground-2)' }}>&ldquo;create a project: [name]&rdquo;</span> to track what you&rsquo;re building.
           </div>
         )}
@@ -129,20 +139,24 @@ async function DrypBusiness() {
   const servicesByAcct = new Map((brands ?? []).map(b => [b.crm_account_id, b.services as string[]]))
 
   return (
-    <div className="page-pad" style={{ maxWidth: 1180, margin: '0 auto' }}>
+    <div style={{ maxWidth: 600, margin: '0 auto', padding: '18px 16px 40px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, paddingBottom: 14, borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
-        <Briefcase size={18} color="#14b8a6" />
-        <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>DRYP</span>
-        <span style={{ color: 'var(--muted)', fontSize: 12 }}>Agency · CRM</span>
-        <a href="https://www.dryphub.com" target="_blank" rel="noopener noreferrer"
-          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--foreground-2)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, padding: '8px 12px' }}>
-          <ExternalLink size={13} color="#14b8a6" /> DRYP Hub
+      <div className="rise rise-1" style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 22 }}>
+        <span className="grad-icon breathe" style={{ width: 40, height: 40, background: '#14b8a61c', borderRadius: 12, flexShrink: 0 }}>
+          <Briefcase size={20} color="#14b8a6" />
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 className="h-hero" style={{ margin: 0, fontSize: 26 }}>DRYP</h1>
+          <p style={{ color: 'var(--foreground-2)', fontSize: 13, margin: '4px 0 0' }}>Agency · CRM</p>
+        </div>
+        <a href="https://www.dryphub.com" target="_blank" rel="noopener noreferrer" className="press"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--foreground-2)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 11, padding: '8px 12px', flexShrink: 0 }}>
+          <ExternalLink size={13} color="#14b8a6" /> Hub
         </a>
       </div>
 
       {/* Stats */}
-      <div className="stat-grid" style={{ margin: '0 0 26px' }}>
+      <div className="stat-grid rise rise-2" style={{ margin: '0 0 26px' }}>
         <StatCard label="PIPELINE" value={money(pipeline)} accent="var(--yellow)" sub="open" />
         <StatCard label="MRR" value={money(mrr)} accent="var(--green)" sub="retainers" />
         <StatCard label="CLIENTS" value={String(activeAccounts.length)} accent="var(--cyan)" sub="active" />
@@ -151,37 +165,55 @@ async function DrypBusiness() {
 
       {/* LEADS */}
       <SectionTitle>LEADS · {openLeads.length} open</SectionTitle>
-      <div className="card-list">
-        {allLeads.map(l => (
-          <div key={l.id} className="list-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(l.business_name || '—').trim()}</div>
-                {l.contact_name && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>{l.contact_name}</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {allLeads.map((l, i) => {
+          const color = STAGE_COLOR[l.stage] ?? '#6b7280'
+          return (
+            <div key={l.id} className={`pcard rise rise-${Math.min(7, (i % 5) + 3)}`}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 13 }}>
+                <span className="grad-icon" style={{ width: 38, height: 38, background: `${color}1c`, borderRadius: 12, flexShrink: 0 }}>
+                  <UserRound size={19} color={color} />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(l.business_name || '—').trim()}</div>
+                      {l.contact_name && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>{l.contact_name}</div>}
+                    </div>
+                    <div style={{ fontWeight: 800, fontSize: 16, whiteSpace: 'nowrap' }}>{l.estimated_value ? money(Number(l.estimated_value)) : '—'}</div>
+                  </div>
+                </div>
               </div>
-              <div style={{ fontWeight: 800, fontSize: 16, whiteSpace: 'nowrap' }}>{l.estimated_value ? money(Number(l.estimated_value)) : '—'}</div>
+              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <InlineSelect table="leads" id={l.id} field="stage" value={l.stage} options={LEAD_STAGES} colors={STAGE_COLOR} />
+                {l.source && <Chip text={l.source} />}
+              </div>
+              {l.next_action && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 10 }}>→ {l.next_action}</div>}
             </div>
-            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <InlineSelect table="leads" id={l.id} field="stage" value={l.stage} options={LEAD_STAGES} colors={STAGE_COLOR} />
-              {l.source && <Chip text={l.source} />}
-            </div>
-            {l.next_action && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 10 }}>→ {l.next_action}</div>}
-          </div>
-        ))}
-        {allLeads.length === 0 && <div className="list-card" style={{ color: 'var(--muted)' }}>No leads.</div>}
+          )
+        })}
+        {allLeads.length === 0 && <div className="pcard" style={{ color: 'var(--muted)' }}>No leads.</div>}
       </div>
 
       {/* CLIENTS */}
       <div style={{ height: 26 }} />
       <SectionTitle>CLIENTS · {activeAccounts.length} active</SectionTitle>
-      <div className="card-list">
-        {activeAccounts.map(a => {
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {activeAccounts.map((a, i) => {
           const svc = servicesByAcct.get(a.id) ?? []
+          const color = HEALTH_COLOR[a.health_status] ?? '#22d3ee'
           return (
-            <div key={a.id} className="list-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--foreground)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(a.business_name || '—').trim()}</div>
-                <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', color: 'var(--foreground-2)' }}>{a.monthly_retainer ? money(Number(a.monthly_retainer)) + '/mo' : '—'}</div>
+            <div key={a.id} className={`pcard rise rise-${Math.min(7, (i % 5) + 3)}`}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 13 }}>
+                <span className="grad-icon" style={{ width: 38, height: 38, background: `${color}1c`, borderRadius: 12, flexShrink: 0 }}>
+                  <Building2 size={19} color={color} />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--foreground)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(a.business_name || '—').trim()}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', color: 'var(--foreground-2)' }}>{a.monthly_retainer ? money(Number(a.monthly_retainer)) + '/mo' : '—'}</div>
+                  </div>
+                </div>
               </div>
               <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <InlineSelect table="accounts" id={a.id} field="health_status" value={a.health_status} options={HEALTH} colors={HEALTH_COLOR} />
@@ -191,13 +223,26 @@ async function DrypBusiness() {
             </div>
           )
         })}
-        {activeAccounts.length === 0 && <div className="list-card" style={{ color: 'var(--muted)' }}>No active clients.</div>}
+        {activeAccounts.length === 0 && <div className="pcard" style={{ color: 'var(--muted)' }}>No active clients.</div>}
       </div>
     </div>
   )
 }
 
 // helpers
+function PageHeader({ icon: Icon, tint, title, subtitle }: { icon: React.ElementType; tint: string; title: string; subtitle: string }) {
+  return (
+    <div className="rise rise-1" style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 22 }}>
+      <span className="grad-icon breathe" style={{ width: 40, height: 40, background: `${tint}1c`, borderRadius: 12, flexShrink: 0 }}>
+        <Icon size={20} color={tint} />
+      </span>
+      <div>
+        <h1 className="h-hero" style={{ margin: 0, fontSize: 26 }}>{title}</h1>
+        <p style={{ color: 'var(--foreground-2)', fontSize: 13, margin: '4px 0 0' }}>{subtitle}</p>
+      </div>
+    </div>
+  )
+}
 function StatCard({ label, value, accent, sub }: { label: string; value: string; accent: string; sub?: string }) {
   return (
     <div className="stat-tile">
@@ -208,7 +253,7 @@ function StatCard({ label, value, accent, sub }: { label: string; value: string;
   )
 }
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <div className="section-label" style={{ marginBottom: 12 }}>{children}</div>
+  return <div className="label" style={{ margin: '0 4px 12px' }}>{children}</div>
 }
 function Chip({ text }: { text: string }) {
   return <span style={{ fontSize: 11, color: 'var(--foreground-2)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', textTransform: 'capitalize' }}>{text}</span>

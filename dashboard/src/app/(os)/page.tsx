@@ -1,15 +1,22 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Sparkles, Loader2, ArrowUp, CheckCircle2, Volume2, VolumeX, Mic, LayoutDashboard } from 'lucide-react'
+import { Sparkles, Loader2, ArrowUp, CheckCircle2, Volume2, VolumeX, Mic, LayoutDashboard, FileText, Activity, MessageCircle, TrendingUp, Lightbulb, Target, Rocket, ArrowRight } from 'lucide-react'
 
 type Msg = { role: 'user' | 'assistant'; content: string; actions?: { tool: string }[] }
 
+const QUICK = [
+  { label: 'Get Daily Briefing', sub: 'Your plan for today', icon: FileText, color: '#8b5cf6', prompt: 'Give me my daily briefing for today.' },
+  { label: 'Analyze My Day', sub: 'How did I perform?', icon: Activity, color: '#a855f7', prompt: 'Analyze how my day is going — where am I aligned with my values, and where am I off?' },
+  { label: 'Ask Anything', sub: 'Questions, ideas, strategy', icon: MessageCircle, color: '#6366f1', prompt: '' },
+  { label: 'Voice Journal', sub: "Talk it out, I'll remember", icon: Mic, color: '#60a5fa', prompt: 'VOICE' },
+]
+
 const SUGGESTIONS = [
-  'How much is DRYP making this month?',
-  'What client items are pressing today?',
-  'How was my P&L last week?',
-  'Draft a follow-up for Tyler at Crafted',
+  { text: 'Review my trading performance', icon: TrendingUp, color: '#8b5cf6' },
+  { text: 'Show me my content ideas', icon: Lightbulb, color: '#fbbf24' },
+  { text: 'What should I focus on tomorrow?', icon: Target, color: '#fb7185' },
+  { text: 'Give me a motivational push', icon: Rocket, color: '#a855f7' },
 ]
 
 // strip markdown so spoken replies sound clean
@@ -23,6 +30,7 @@ export default function HomeChat() {
   const [cost, setCost] = useState(0)               // running $ for this conversation
   const [listening, setListening] = useState(false)
   const scroller = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const recRef = useRef<{ stop: () => void } | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -135,12 +143,44 @@ export default function HomeChat() {
 
       <div ref={scroller} style={{ flex: 1, overflowY: 'auto', padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {messages.length === 0 && (
-          <div style={{ margin: 'auto', textAlign: 'center', maxWidth: 480 }}>
-            <div style={{ fontSize: 15, color: 'var(--foreground-2)', marginBottom: 16 }}>Morning. Talk to me — money, clients, content, trades, or just what&apos;s on your mind.</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {SUGGESTIONS.map(s => (
-                <button key={s} onClick={() => send(s)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', color: 'var(--foreground-2)', fontSize: 13.5, cursor: 'pointer', textAlign: 'left' }}>{s}</button>
-              ))}
+          <div style={{ margin: 'auto 0', maxWidth: 480, width: '100%', paddingTop: 8 }}>
+            {/* Orb */}
+            <div className="rise rise-1" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 26 }}>
+              <div className="orb" style={{ width: 150, height: 150, marginBottom: 22 }} />
+              <div style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-0.02em' }}>How can I help you, Kaleb?</div>
+              <div style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 4 }}>Atlas is listening.</div>
+            </div>
+
+            {/* Quick actions */}
+            <div className="rise rise-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
+              {QUICK.map(q => {
+                const Icon = q.icon
+                return (
+                  <button key={q.label} className="pcard press" onClick={() => { if (q.prompt === 'VOICE') toggleMic(); else if (q.prompt === '') inputRef.current?.focus(); else send(q.prompt) }}
+                    style={{ textAlign: 'left', cursor: 'pointer', padding: 14 }}>
+                    <span className="grad-icon" style={{ width: 34, height: 34, background: `${q.color}22`, borderRadius: 10, marginBottom: 10, display: 'inline-flex' }}><Icon size={17} color={q.color} /></span>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--foreground)' }}>{q.label}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>{q.sub}</div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Suggested */}
+            <div className="rise rise-3">
+              <div className="label" style={{ margin: '0 2px 10px' }}>Suggested for you</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {SUGGESTIONS.map(s => {
+                  const Icon = s.icon
+                  return (
+                    <button key={s.text} className="pcard press" onClick={() => send(s.text)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', cursor: 'pointer', textAlign: 'left' }}>
+                      <Icon size={17} color={s.color} />
+                      <span style={{ flex: 1, fontSize: 14, color: 'var(--foreground)' }}>{s.text}</span>
+                      <ArrowRight size={16} color="var(--muted)" />
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -172,6 +212,7 @@ export default function HomeChat() {
             <Mic size={18} />
           </button>
           <textarea
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}

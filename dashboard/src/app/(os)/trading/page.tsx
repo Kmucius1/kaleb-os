@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { formatDate } from '@/lib/utils'
+import Sparkline from '@/components/ui/Sparkline'
+import { BarChart2, Sparkles } from 'lucide-react'
 
 export const revalidate = 120
 
@@ -38,18 +40,33 @@ export default async function TradingPage() {
 
   const hasData = all.length > 0
 
+  // Real cumulative-P&L equity curve, oldest → newest (trades come back newest-first).
+  const equity: number[] = []
+  {
+    let run = 0
+    for (const t of [...all].reverse()) { run += t.pnl ?? 0; equity.push(run) }
+  }
+  const curveColor = totalPnl >= 0 ? 'var(--green)' : 'var(--red)'
+
   return (
-    <div className="page-pad" style={{ maxWidth: 1000, margin: '0 auto' }}>
+    <div style={{ maxWidth: 620, margin: '0 auto', padding: '18px 16px 40px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', margin: '2px 0 20px' }}>
-        <h1 style={{ fontSize: 27, fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>Trading</h1>
-        <span className="pillar-tag" style={{ color: hasData ? 'var(--accent)' : 'var(--muted)', background: hasData ? 'var(--accent-dim)' : 'var(--surface-2)' }}>Phase 7</span>
-        {hasData && <span style={{ color: 'var(--muted)', fontSize: 12 }}>{all.length} trades tracked</span>}
+      <div className="rise rise-1" style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 20 }}>
+        <span className="grad-icon breathe" style={{ width: 40, height: 40, background: 'var(--accent-dim)', borderRadius: 12, flexShrink: 0 }}>
+          <BarChart2 size={20} color="var(--accent)" />
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexWrap: 'wrap' }}>
+            <h1 className="h-hero" style={{ margin: 0, fontSize: 26 }}>Trading</h1>
+            <span className="pillar-tag" style={{ color: hasData ? 'var(--accent)' : 'var(--muted)', background: hasData ? 'var(--accent-dim)' : 'var(--surface-2)' }}>Phase 7</span>
+          </div>
+          {hasData && <p style={{ color: 'var(--foreground-2)', fontSize: 13, margin: '4px 0 0' }}>{all.length} trades tracked</p>}
+        </div>
       </div>
 
       {!hasData && (
-        <div className="card2" style={{ marginBottom: 20 }}>
-          <div className="section-label" style={{ marginBottom: 8 }}>Phase 7 — Not Yet Active</div>
+        <div className="pcard rise rise-2" style={{ marginBottom: 20 }}>
+          <div className="label" style={{ marginBottom: 8 }}>Phase 7 — Not Yet Active</div>
           <div style={{ fontSize: 13.5, color: 'var(--foreground)', lineHeight: 1.6, marginBottom: 10 }}>
             Phase 7 activates trading discipline tracking. Connect TradePrint via n8n webhook to
             auto-capture trades. Atlas will track P&amp;L, identify patterns, and surface discipline insights.
@@ -60,8 +77,26 @@ export default async function TradingPage() {
         </div>
       )}
 
+      {/* Equity curve — real cumulative P&L */}
+      {hasData && equity.length >= 2 && (
+        <div className="pcard glow rise rise-2" style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <div className="label" style={{ marginBottom: 8 }}>Cumulative P&amp;L</div>
+              <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.02em', color: curveColor, lineHeight: 1 }}>
+                {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}
+              </div>
+              <div className="stat-sub" style={{ marginTop: 6 }}>across {all.length} trades</div>
+            </div>
+          </div>
+          <div style={{ marginTop: 14, marginLeft: -2 }}>
+            <Sparkline data={equity} color={curveColor} width={560} height={64} />
+          </div>
+        </div>
+      )}
+
       {/* P&L stat tiles */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 24 }}>
+      <div className="rise rise-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 24 }}>
         <div className="stat-tile">
           <div className="stat-num" style={{ color: hasData ? (totalPnl >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--muted)' }}>
             {hasData ? `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}` : '—'}
@@ -88,17 +123,22 @@ export default async function TradingPage() {
 
       {/* Insights */}
       {allInsights.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <div className="section-label" style={{ marginBottom: 12 }}>Atlas Insights ({allInsights.length})</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="rise rise-4" style={{ marginBottom: 24 }}>
+          <div className="label" style={{ margin: '0 4px 12px' }}>Atlas Insights · {allInsights.length}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {allInsights.map(insight => (
-              <div key={insight.id} className="card2" style={{ borderLeft: '3px solid var(--accent)' }}>
-                {insight.insight_type && (
-                  <div style={{ fontSize: 9, color: 'var(--accent)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 5 }}>
-                    {insight.insight_type.toUpperCase()}
-                  </div>
-                )}
-                <div style={{ fontSize: 13.5, color: 'var(--foreground)', lineHeight: 1.5 }}>{insight.description}</div>
+              <div key={insight.id} className="pcard" style={{ display: 'flex', gap: 13, alignItems: 'flex-start' }}>
+                <span className="grad-icon" style={{ width: 34, height: 34, background: 'var(--accent-dim)', borderRadius: 11, flexShrink: 0 }}>
+                  <Sparkles size={17} color="var(--accent)" />
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  {insight.insight_type && (
+                    <div className="stat-cap" style={{ color: 'var(--accent)', marginTop: 0, marginBottom: 4 }}>
+                      {insight.insight_type.toUpperCase()}
+                    </div>
+                  )}
+                  <div style={{ fontSize: 13.5, color: 'var(--foreground)', lineHeight: 1.5 }}>{insight.description}</div>
+                </div>
               </div>
             ))}
           </div>
@@ -106,14 +146,14 @@ export default async function TradingPage() {
       )}
 
       {/* Trade log */}
-      <div className="section-label" style={{ marginBottom: 12 }}>Trade Log ({all.length})</div>
+      <div className="label rise rise-5" style={{ margin: '0 4px 12px' }}>Trade Log · {all.length}</div>
 
       {all.length === 0 ? (
-        <div className="card2" style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: '36px 16px' }}>
+        <div className="pcard rise rise-5" style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: '36px 16px' }}>
           — no trades captured yet —
         </div>
       ) : (
-        <div className="card2" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="card2 rise rise-5" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
               <thead>

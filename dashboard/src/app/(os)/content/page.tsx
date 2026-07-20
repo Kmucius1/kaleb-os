@@ -27,34 +27,37 @@ export default async function ContentOverview() {
     .filter(p => p.brand_id === id).reduce((s, p) => s + (p.leads ?? 0), 0)
 
   return (
-    <div className="page-pad" style={{ maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ maxWidth: 620, margin: '0 auto', padding: '18px 16px 40px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22, paddingBottom: 16, borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
-        <div className="grad-icon" style={{ width: 40, height: 40, background: `linear-gradient(135deg, ${meta.color}, color-mix(in srgb, ${meta.color} 55%, #000))` }}>
+      <div className="rise rise-1" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+        <div className="grad-icon" style={{ width: 40, height: 40, background: `linear-gradient(135deg, ${meta.color}, color-mix(in srgb, ${meta.color} 55%, #000))`, borderRadius: 12 }}>
           <Clapperboard size={19} color="#fff" />
         </div>
-        <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>Content Engine</span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: meta.color, background: `${meta.color}1f`, padding: '4px 10px', borderRadius: 20 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 className="h-hero" style={{ margin: 0, fontSize: 24 }}>Content Engine</h1>
+        </div>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: meta.color, background: `${meta.color}1f`, padding: '5px 11px', borderRadius: 20 }}>
           <SpaceIcon size={12} /> {space === 'dryp' ? 'DRYP · Clients' : 'Personal'}
         </span>
       </div>
 
-      <div className="section-label" style={{ marginBottom: 14 }}>
+      <div className="label rise rise-2" style={{ margin: '0 2px 14px' }}>
         {space === 'dryp' ? 'Client Brands' : 'Your Brands & Ventures'}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-        {allBrands.map((b) => {
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+        {allBrands.map((b, idx) => {
           const accent = b.color ?? 'var(--accent)'
           const collab = (b.default_collab_with ?? []).length ? `collabs w/ ${b.default_collab_with!.join(', ')}` : 'solo'
           return (
-            <Link key={b.id} href={`/content/${b.slug}`} style={{ textDecoration: 'none' }}>
-              <div className="card2" style={{ borderLeft: `3px solid ${accent}`, height: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ color: 'var(--foreground)', fontWeight: 700, fontSize: 15.5, letterSpacing: '-0.01em' }}>{b.name}</span>
-                  <ArrowRight size={15} color="var(--muted)" />
+            <Link key={b.id} href={`/content/${b.slug}`} style={{ textDecoration: 'none' }} className={`press rise rise-${Math.min(7, (idx % 5) + 2)}`}>
+              <div className="pcard" style={{ position: 'relative', overflow: 'hidden', height: '100%' }}>
+                <span style={{ position: 'absolute', left: 0, top: 14, bottom: 14, width: 3.5, borderRadius: 4, background: accent }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span className="h-title" style={{ color: 'var(--foreground)', fontSize: 17 }}>{b.name}</span>
+                  <ArrowRight size={16} color="var(--muted)" />
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 18 }}>
                   <span className="pillar-tag" style={{ color: accent, background: `${accent}1f` }}>{b.kind}</span>
                   <span style={{ fontSize: 11, color: 'var(--muted)' }}>{collab}</span>
                   {b.status !== 'active' && <span style={{ fontSize: 11, color: 'var(--yellow)' }}>· {b.status}</span>}
@@ -67,7 +70,7 @@ export default async function ContentOverview() {
                   ].map((s) => (
                     <div key={s.label}>
                       <div style={{ color: s.color, fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1 }}>{s.value}</div>
-                      <div className="stat-cap" style={{ marginTop: 5 }}>{s.label}</div>
+                      <div className="stat-cap" style={{ marginTop: 6 }}>{s.label}</div>
                     </div>
                   ))}
                 </div>
@@ -78,7 +81,7 @@ export default async function ContentOverview() {
       </div>
 
       {allBrands.length === 0 && (
-        <div className="card2" style={{ color: 'var(--muted)', fontSize: 13, marginTop: 14, lineHeight: 1.5 }}>
+        <div className="pcard rise rise-2" style={{ color: 'var(--muted)', fontSize: 13, marginTop: 14, lineHeight: 1.55 }}>
           {space === 'dryp'
             ? 'No DRYP client content brands yet. Clients with a social_media or ads_management service sync in here automatically.'
             : 'No personal brands yet — run the content engine migration to seed them.'}

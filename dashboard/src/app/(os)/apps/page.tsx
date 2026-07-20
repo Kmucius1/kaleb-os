@@ -113,18 +113,18 @@ export default async function AppsPage() {
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '20px 16px 28px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 4px 6px' }}>
+      <div className="rise rise-1" style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 4px 6px' }}>
         <h1 className="ios-largetitle">Apps</h1>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: meta.color, background: `${meta.color}1f`, padding: '4px 10px', borderRadius: 20 }}>
           <SpaceIcon size={13} /> {meta.label}
         </span>
       </div>
-      <p style={{ color: 'var(--foreground-2)', fontSize: 13.5, lineHeight: 1.55, margin: '0 4px 24px' }}>
+      <p className="rise rise-1" style={{ color: 'var(--foreground-2)', fontSize: 13.5, lineHeight: 1.55, margin: '0 4px 24px' }}>
         {space === 'dryp' ? 'The agency — clients, delivery & revenue.' : 'You + your missions & ventures.'}
       </p>
 
-      {groups.map(group => (
-        <section key={group.title} style={{ marginBottom: 24 }}>
+      {groups.map((group, gi) => (
+        <section key={group.title} className={`rise rise-${Math.min(7, gi + 2)}`} style={{ marginBottom: 24 }}>
           <h2 className="section-label" style={{ margin: '0 4px 10px' }}>{group.title}</h2>
           <div className="springboard">
             {group.apps.map(app => {
@@ -148,13 +148,13 @@ export default async function AppsPage() {
       ))}
 
       {/* At a glance — live counts (real fetched data only) */}
-      <section style={{ marginTop: 2 }}>
+      <section className="rise rise-7" style={{ marginTop: 2 }}>
         <h2 className="section-label" style={{ margin: '0 4px 10px' }}>At a Glance</h2>
         <div className="card2" style={{ padding: 4 }}>
           {glance.map((g, i) => {
             const Icon = g.icon
             return (
-              <Link key={g.href} href={g.href} className="list-row row-hover" style={{ borderRadius: 14, borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+              <Link key={g.href} href={g.href} className="list-row row-hover press" style={{ borderRadius: 14, borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
                 <span className="grad-icon" style={{ width: 40, height: 40, background: g.color }}>
                   <Icon size={19} color="#fff" strokeWidth={2} />
                 </span>

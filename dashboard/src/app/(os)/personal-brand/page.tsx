@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { Star, Camera } from 'lucide-react'
 import { formatTime } from '@/lib/utils'
+import Sparkline from '@/components/ui/Sparkline'
 
 export const revalidate = 120
 
@@ -50,21 +51,20 @@ export default async function PersonalBrandPage() {
   ])
 
   const all = ideas ?? []
-  const maxReach = ig && ig.reachDays.length > 0 ? Math.max(...ig.reachDays, 1) : 1
 
   return (
-    <div className="page-pad" style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <div style={{ maxWidth: 600, margin: '0 auto', padding: '18px 16px 40px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
-        <div className="grad-icon" style={{ width: 40, height: 40, background: 'var(--accent-grad)' }}>
+      <div className="rise rise-1" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+        <div className="grad-icon breathe" style={{ width: 40, height: 40, background: 'var(--accent-grad)', borderRadius: 12 }}>
           <Star size={19} color="#fff" />
         </div>
-        <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>Personal Brand</span>
-        <span style={{ color: 'var(--muted)', fontSize: 12 }}>&ldquo;One System. Built to Win.&rdquo;</span>
+        <h1 className="h-hero" style={{ margin: 0, fontSize: 24 }}>Personal Brand</h1>
+        <span style={{ color: 'var(--muted)', fontSize: 12, marginLeft: 'auto' }}>&ldquo;One System. Built to Win.&rdquo;</span>
       </div>
 
       {/* Top stat tiles */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 24 }}>
+      <div className="rise rise-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
         {[
           { label: 'Ideas Captured', value: String(all.length), color: 'var(--accent)', sub: 'in the vault' },
           { label: 'Audience Growth', value: ig ? `+${ig.weeklyFollowers}` : '—', color: ig ? 'var(--green)' : 'var(--muted)', sub: 'this week' },
@@ -79,10 +79,11 @@ export default async function PersonalBrandPage() {
       </div>
 
       {ig && (
-        <div className="card2" style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-            <Camera size={13} color="#e1306c" />
-            <span className="section-label" style={{ color: 'var(--foreground)' }}>Instagram — @{ig.username}</span>
+        <div className="pcard rise rise-3" style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            <span className="grad-icon" style={{ width: 34, height: 34, background: 'color-mix(in srgb, #e1306c 16%, transparent)', borderRadius: 11 }}><Camera size={16} color="#e1306c" /></span>
+            <span className="label">Instagram</span>
+            <span style={{ fontSize: 12, color: 'var(--foreground-2)', fontWeight: 600 }}>@{ig.username}</span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 22 }}>
@@ -99,43 +100,33 @@ export default async function PersonalBrandPage() {
             ))}
           </div>
 
-          <div>
-            <div className="section-label" style={{ marginBottom: 10 }}>Daily Reach — Last 7 Days</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 48 }}>
-              {ig.reachDays.map((v: number, i: number) => (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
-                  <div
-                    title={`${v} reach`}
-                    style={{
-                      width: '100%',
-                      height: `${Math.max(4, (v / maxReach) * 44)}px`,
-                      background: 'linear-gradient(to top, #6366f1, var(--accent-2))',
-                      borderRadius: '3px 3px 0 0',
-                      opacity: 0.6 + (i / Math.max(ig.reachDays.length - 1, 1)) * 0.4,
-                    }}
-                  />
-                </div>
-              ))}
+          {ig.reachDays.length > 1 && (
+            <div>
+              <div className="label" style={{ marginBottom: 12 }}>Daily Reach — Last 7 Days</div>
+              <div style={{ overflowX: 'auto' }}>
+                <Sparkline data={ig.reachDays} color="var(--accent)" width={520} height={54} />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
-      <div className="section-label" style={{ marginBottom: 14 }}>
-        Content Ideas ({all.length})
+      <div className="label rise rise-4" style={{ margin: '0 2px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span>Content Ideas</span>
+        <span style={{ color: 'var(--muted)', fontWeight: 600, letterSpacing: 0 }}>{all.length}</span>
       </div>
       {all.length === 0 ? (
-        <div className="card2" style={{ padding: 32, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>
+        <div className="pcard rise rise-4" style={{ padding: 32, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>
           <div style={{ marginBottom: 8 }}>— no ideas captured yet —</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted-2)' }}>Ask Atlas: &ldquo;surface content ideas from my captures and voice notes&rdquo;</div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {all.map((idea: any) => (
-            <div key={idea.id} className="list-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          {all.map((idea: any, idx: number) => (
+            <div key={idea.id} className={`pcard press rise rise-${Math.min(7, (idx % 4) + 4)}`} style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, color: 'var(--foreground)', fontWeight: 600, marginBottom: 3 }}>{idea.title}</div>
-                {idea.description && <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.45 }}>{idea.description.slice(0, 100)}</div>}
+                <div style={{ fontSize: 14, color: 'var(--foreground)', fontWeight: 600, marginBottom: 3 }}>{idea.title}</div>
+                {idea.description && <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.5 }}>{idea.description.slice(0, 100)}</div>}
               </div>
               <div style={{ fontSize: 10.5, color: 'var(--muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{formatTime(idea.created_at)}</div>
             </div>

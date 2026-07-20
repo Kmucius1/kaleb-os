@@ -127,6 +127,23 @@
 .h-title { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
 .label { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 
+/* Atlas orb — glowing gradient sphere that breathes. */
+@keyframes orbFloat { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-6px) scale(1.03); } }
+@keyframes orbGlow { 0%,100% { opacity: .55; } 50% { opacity: .9; } }
+.orb {
+  position: relative; border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(196,181,253,0.95), rgba(139,92,246,0.6) 42%, rgba(99,102,241,0.25) 70%, transparent 78%);
+  box-shadow: 0 0 60px -8px rgba(139,92,246,0.65), inset 0 0 40px rgba(255,255,255,0.12);
+  animation: orbFloat 6s ease-in-out infinite;
+}
+.orb::before {
+  content: ''; position: absolute; inset: 8%; border-radius: 50%;
+  background: radial-gradient(circle at 65% 70%, rgba(99,102,241,0.5), transparent 60%);
+  animation: orbGlow 4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .orb { animation: none; } .orb::before { animation: none; } }
+
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 html { -webkit-text-size-adjust: 100%; }

@@ -19,7 +19,7 @@ export default function TabBar({
     { href: '/dashboard', label: 'Home', icon: Home },
     { href: '/schedule', label: 'Schedule', icon: CalendarDays },
     { href: '/', label: 'Atlas', icon: Orbit },
-    { href: '/feeling', label: 'Journal', icon: NotebookPen },
+    { href: '/journal', label: 'Journal', icon: NotebookPen },
     { href: '/business', label: 'Empire', icon: Building2, badge: approvalCount + taskCount },
   ]
 
