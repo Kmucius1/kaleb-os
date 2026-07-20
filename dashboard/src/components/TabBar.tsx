@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Sparkles, Home, LayoutGrid, Clapperboard, Briefcase } from 'lucide-react'
+import { Sparkles, Home, LayoutGrid, Clapperboard, Briefcase, CalendarDays } from 'lucide-react'
 
 type Tab = { href: string; label: string; icon: React.ElementType; badge?: number }
 
@@ -20,6 +20,7 @@ export default function TabBar({
   const tabs: Tab[] = [
     { href: '/', label: 'Atlas', icon: Sparkles },
     { href: '/dashboard', label: 'Today', icon: Home },
+    { href: '/schedule', label: 'Schedule', icon: CalendarDays },
     { href: '/apps', label: 'Apps', icon: LayoutGrid, badge: approvalCount + taskCount },
     { href: '/content', label: 'Content', icon: Clapperboard },
     { href: '/business', label: 'Business', icon: Briefcase },

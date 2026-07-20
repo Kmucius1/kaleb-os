@@ -64,8 +64,9 @@ export async function GET(request: Request) {
       if (!(nowMin >= b.start_min && nowMin < b.start_min + BLOCK_WINDOW)) continue
       if (!(await claimOnce('block', b.id, b.title))) continue
       const emoji = PILLAR_EMOJI[b.pillar] ?? '⏱️'
-      const title = `${emoji} ${fmtClock(b.start_min)} · ${b.title}${b.theme ? ` — ${b.theme}` : ''}`
-      const body = [b.identity ? `Identity: ${b.identity}.` : '', b.detail || ''].filter(Boolean).join(' ')
+      // Spoken-style headline ("Time to wake up"); context in the body.
+      const title = `${emoji} ${b.cue || b.title}`
+      const body = [b.theme ? `Today: ${b.theme}.` : '', b.detail || ''].filter(Boolean).join(' ')
       const r = await sendPushToAll({ title, body, url: '/schedule', tag: 'schedule' })
       sent += r.sent
     }

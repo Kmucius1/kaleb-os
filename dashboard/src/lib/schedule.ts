@@ -27,6 +27,7 @@ export type Block = {
   detail: string | null;
   rotates: string | null;
   notify: boolean;
+  cue: string | null; // spoken-style notification headline
   theme?: string | null; // resolved rotation theme for today
 };
 
