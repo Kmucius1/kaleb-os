@@ -5,12 +5,37 @@ type Msg = { role: string; content: string | null; tool_calls?: unknown[]; tool_
 
 export type IngestResult = { summary: string; filed: number; actions: { tool: string; args: unknown }[]; error?: string };
 
+// Code word that routes a capture into Trade Print (Kaleb's trading journal).
+// Only captures containing this phrase are forwarded — everything else stays in Kaleb OS only.
+const TRADING_SESSION_CODE = /start\s+trading\s+session/i;
+
+// If Kaleb said the code word, forward the FULL narration to Trade Print so it lands
+// as a trading session (his live setup/chart commentary). Best-effort, never blocks ingest.
+async function maybeForwardTradingSession(transcript: string, source?: string): Promise<void> {
+  if (!TRADING_SESSION_CODE.test(transcript)) return;
+  const url = process.env.TRADEPRINT_SESSION_INGEST_URL;
+  const secret = process.env.TRADEPRINT_INGEST_SECRET;
+  if (!url || !secret) return; // connection not configured — no-op
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript, source: source || "PLAUD" }),
+    });
+  } catch {
+    // best-effort: Trade Print being down must never break Kaleb OS ingest
+  }
+}
+
 // Turn a raw capture (PLAUD recording / voice memo / brain-dump) into filed
 // Kaleb OS records by running Atlas's tool-loop in INGEST MODE. Shared by
 // /api/ingest/transcript and /api/ingest/plaud.
 export async function ingestTranscript(transcript: string, source?: string): Promise<IngestResult> {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) return { summary: "", filed: 0, actions: [], error: "OPENROUTER_API_KEY not set" };
+
+  // Route into Trade Print if Kaleb used the code word (parallel to Kaleb OS filing).
+  void maybeForwardTradingSession(String(transcript), source);
 
   const { persona } = await getContext();
   const system = [
