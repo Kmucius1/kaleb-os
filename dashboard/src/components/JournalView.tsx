@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import JournalCapture from '@/components/JournalCapture'
+import VoiceJournal from '@/components/rhythm/VoiceJournal'
 import { Brain, ChevronRight } from 'lucide-react'
 
 type Entry = { id: string; content: string; kind?: string; created_at: string }
@@ -44,7 +44,7 @@ export default function JournalView({ entries, patterns }: { entries: Entry[]; p
       </div>
 
       {tab === 'capture' && (
-        <div style={{ marginBottom: 8 }}><JournalCapture /></div>
+        <div style={{ marginBottom: 8 }}><VoiceJournal /></div>
       )}
 
       {tab === 'entries' && (

@@ -2,11 +2,8 @@ import { supabase } from '@/lib/supabase'
 import { supabaseDryp } from '@/lib/supabaseDryp'
 import { sendPushToAll, claimOnce } from '@/lib/push'
 import { getTodaySchedule, fmtClock } from '@/lib/schedule'
-
-// Emoji per pillar for schedule notifications.
-const PILLAR_EMOJI: Record<string, string> = {
-  Spirit: '🧘', Mind: '🧠', Body: '💪', Money: '💰', Mission: '🚀', Relationships: '🤝',
-}
+import { resolveDay } from '@/lib/rhythm/day'
+import { noticesFor } from '@/lib/rhythm/notify'
 // Only fire a block/event within this many minutes of its start (one tick after
 // it begins) so a mid-day deploy doesn't replay the whole morning.
 const BLOCK_WINDOW = 16
@@ -56,20 +53,21 @@ export async function GET(request: Request) {
     sent += r.sent
   }
 
-  // 1b) The schedule itself — fire a push as each block (and dated event) begins.
+  // 1b) The rhythm itself — block starts, travel departures, the sun-anchored
+  // Horizon Walk, wind-down and conflicts. Every notice explains why it matters
+  // and is claimed once per day.
   try {
-    const s = await getTodaySchedule()
-    for (const b of s.blocks) {
-      if (!b.notify) continue
-      if (!(nowMin >= b.start_min && nowMin < b.start_min + BLOCK_WINDOW)) continue
-      if (!(await claimOnce('block', b.id, b.title))) continue
-      const emoji = PILLAR_EMOJI[b.pillar] ?? '⏱️'
-      // Spoken-style headline ("Time to wake up"); context in the body.
-      const title = `${emoji} ${b.cue || b.title}`
-      const body = [b.theme ? `Today: ${b.theme}.` : '', b.detail || ''].filter(Boolean).join(' ')
-      const r = await sendPushToAll({ title, body, url: '/schedule', tag: 'schedule' })
+    const day = await resolveDay()
+    for (const n of noticesFor(day, nowMin)) {
+      if (!(await claimOnce('rhythm', n.id, n.title, n.body))) continue
+      const r = await sendPushToAll({ title: n.title, body: n.body, url: n.url, tag: n.tag })
       sent += r.sent
     }
+  } catch (err) { log.rhythm_error = (err as Error).message }
+
+  // 1c) Dated one-off events still fire from the calendar table.
+  try {
+    const s = await getTodaySchedule()
     for (const e of s.events) {
       if (!e.notify || e.start_min == null) continue
       if (!(nowMin >= e.start_min && nowMin < e.start_min + BLOCK_WINDOW)) continue

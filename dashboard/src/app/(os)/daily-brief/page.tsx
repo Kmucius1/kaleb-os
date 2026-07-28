@@ -93,7 +93,7 @@ export default async function DailyBriefPage() {
             </div>
           )}
 
-          <Link href="/" className="press rise rise-6" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '13px', borderRadius: 14, background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 700 }}>
+          <Link href="/atlas" className="press rise rise-6" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '13px', borderRadius: 14, background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 700 }}>
             Ask Atlas anything
           </Link>
         </>

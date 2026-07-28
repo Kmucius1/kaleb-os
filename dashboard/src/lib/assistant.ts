@@ -43,6 +43,9 @@ export const TOOLS = [
   { type: "function", function: { name: "get_projects", description: "Kaleb's GitHub project portfolio (all his repos) organized by what he's actively working on vs dormant. Use for 'what am I working on', 'which projects are stale', 'what have I not touched', portfolio/side-project questions. Shows last-push recency + his manual labels (working|live|shelved|idea).", parameters: { type: "object", properties: {} } } },
   { type: "function", function: { name: "get_schedule", description: "Kaleb's schedule for today — his structured daily rhythm (the six-pillar blocks) plus any one-off events, and which block he is in RIGHT NOW. Use for 'what's my day', 'what's next', 'when is X', 'am I on track', or any time/schedule question.", parameters: { type: "object", properties: {} } } },
   { type: "function", function: { name: "add_event", description: "Add a one-off event to Kaleb's personal calendar. KalebOS IS his personal calendar (not Google) — when he mentions an appointment/meeting/plan tied to a date (e.g. 'dentist Thursday at 3', 'call with Mick tomorrow 2-3pm', 'flight Saturday'), add it. date = YYYY-MM-DD (ET). start/end = 24h 'HH:MM' (omit both for all-day). pillar optional (Spirit|Mind|Body|Money|Mission|Relationships).", parameters: { type: "object", properties: { title: { type: "string" }, date: { type: "string" }, start: { type: "string" }, end: { type: "string" }, location: { type: "string" }, note: { type: "string" }, pillar: { type: "string" } }, required: ["title", "date"] } } },
+  { type: "function", function: { name: "rebalance_day", description: "Recompute today's remaining schedule when something ran long or changed. Returns a PROPOSAL describing exactly what would move, shorten or be skipped, and why. It does NOT change anything: present it to Kaleb and only call again with approve=true if he agrees. Protected blocks (sleep, trading, DRYP, meetings) are never moved. Use for 'my meeting ran late', 'rebalance my day', 'I lost two hours'.", parameters: { type: "object", properties: { approve: { type: "boolean", description: "true only after Kaleb explicitly approves the proposal you already showed him" }, block_key: { type: "string", description: "the block that ran long, e.g. dryp, trading, commute-home" }, new_end: { type: "string", description: "its actual new end time, 24h 'HH:MM' ET" } } } } },
+  { type: "function", function: { name: "get_horizon", description: "Horizon Walk status: today's recommended sunrise/sunset window, leave-by time, whether it's done, and the weekly count against the five-of-seven floor. Use for beach/sunset/sunrise/walk questions.", parameters: { type: "object", properties: {} } } },
+  { type: "function", function: { name: "log_horizon_walk", description: "Record that Kaleb did today's Horizon Walk (the beach at sunrise or sunset). Only call when he says he went.", parameters: { type: "object", properties: { window: { type: "string", enum: ["sunrise", "sunset"] }, note: { type: "string" } } } } },
   { type: "function", function: { name: "tune_atlas", description: "Adjust how YOU (Atlas) behave going forward per Kaleb's instruction (e.g. 'be more concise', 'call me bro less'). Persists to your persona.", parameters: { type: "object", properties: { change: { type: "string" } }, required: ["change"] } } },
   { type: "function", function: { name: "update_setting", description: "Set any app config key/value (kalebos_config). Use for misc settings Kaleb asks to change.", parameters: { type: "object", properties: { key: { type: "string" }, value: { type: "string" } }, required: ["key", "value"] } } },
 ] as const;
@@ -207,6 +210,70 @@ async function runTool(name: string, args: Record<string, unknown>): Promise<unk
         });
       } catch { /* push is best-effort; the event is already saved */ }
       return { ok: true, event: { title: data.title, date: data.event_date, at: when } };
+    }
+    case "rebalance_day": {
+      const { proposeRebalance, applyRebalance, todayET } = await import("./rhythm/day");
+      const { fmtMin } = await import("./rhythm/engine");
+      const toMin = (t?: string): number | null => {
+        if (!t) return null;
+        const m = /^(\d{1,2}):(\d{2})/.exec(String(t).trim());
+        return m ? (Number(m[1]) % 24) * 60 + Number(m[2]) : null;
+      };
+      const newEnd = toMin(args.new_end as string);
+      const disruption = args.block_key && newEnd != null
+        ? { key: String(args.block_key), newEnd }
+        : undefined;
+      const { proposal } = await proposeRebalance(disruption);
+      const changes = proposal.changes
+        .filter(c => c.kind !== "kept")
+        .map(c => ({
+          block: c.title,
+          change: c.kind,
+          ...(c.from && c.to ? { from: `${fmtMin(c.from.start)}–${fmtMin(c.from.end)}`, to: `${fmtMin(c.to.start)}–${fmtMin(c.to.end)}` } : {}),
+          why: c.why,
+        }));
+      if (args.approve === true) {
+        await applyRebalance(todayET(), proposal.blocks);
+        return { applied: true, summary: proposal.summary, changes, warnings: proposal.warnings };
+      }
+      return {
+        applied: false,
+        needs_approval: true,
+        summary: proposal.summary,
+        changes,
+        warnings: proposal.warnings,
+        note: "Show this to Kaleb. Call again with approve=true only if he says yes.",
+      };
+    }
+    case "get_horizon": {
+      const { resolveDay } = await import("./rhythm/day");
+      const { fmtMin } = await import("./rhythm/engine");
+      const day = await resolveDay();
+      const h = day.horizon;
+      return {
+        done_today: h.doneToday,
+        planned: h.block ? `${fmtMin(h.block.start)}–${fmtMin(h.block.end)}` : null,
+        leave_by: h.block ? fmtMin(h.block.start - (h.block.travelMinutes ?? 0)) : null,
+        sunrise: fmtMin(day.sun.sunriseMin),
+        sunset: fmtMin(day.sun.sunsetMin),
+        week: `${h.week.done} of 7 (floor ${h.week.minimum})`,
+        at_risk: h.week.atRisk,
+      };
+    }
+    case "log_horizon_walk": {
+      const { logHorizonWalk, todayET, weekDates, getHorizonLog } = await import("./rhythm/day");
+      const { horizonWeek } = await import("./rhythm/sun");
+      const date = todayET();
+      await logHorizonWalk({
+        date,
+        window: (args.window as "sunrise" | "sunset") ?? "sunset",
+        method: "voice",
+        note: args.note as string | undefined,
+      });
+      const wk = weekDates(date);
+      const log = await getHorizonLog(wk[0], wk[6]);
+      const week = horizonWeek(log.map(h => h.date), wk, date);
+      return { ok: true, date, week: `${week.done} of 7`, met_minimum: week.metMinimum };
     }
     case "tune_atlas": {
       const { data: cfg } = await supabase.from("kalebos_config").select("value").eq("key", "persona").maybeSingle();

@@ -144,22 +144,39 @@ export async function blockCountsByDayType(): Promise<Record<string, number>> {
   return out;
 }
 
-// Compact live schedule context injected into Atlas's system prompt every turn.
+// Compact live context injected into Atlas's system prompt every turn.
+// Sourced from the rhythm engine so Atlas sees the same day Kaleb sees —
+// sun-anchored Horizon Walk, protected blocks, alignment and sleep included.
 export async function getScheduleContext(): Promise<string> {
-  const s = await getTodaySchedule();
-  const cur = s.current
-    ? `${s.current.title}${s.current.theme ? ` — ${s.current.theme}` : ""} [${s.current.pillar}]${s.current.identity ? ` · identity: ${s.current.identity}` : ""}`
-    : "unscheduled / transition";
-  const nxt = s.next ? `${fmtClock(s.next.start_min)} ${s.next.title}${s.next.theme ? ` — ${s.next.theme}` : ""}` : "end of day";
-  const themes = s.blocks.filter((b) => b.theme).map((b) => `${b.title.replace(/^Commute — /, "").replace(/ .*/, "")}=${b.theme}`);
-  const events = s.events.length
-    ? s.events.map((e) => `${e.start_min != null ? fmtClock(e.start_min) + " " : ""}${e.title}`).join("; ")
-    : "none";
-  const clock = fmtClock(s.nowMin);
+  const { resolveDay } = await import("./rhythm/day");
+  const { scoreDay } = await import("./rhythm/alignment");
+  const { SLEEP } = await import("./rhythm/template");
+
+  const day = await resolveDay();
+  const a = scoreDay(day.blocks, day.nowMin);
+  const label = (b: { title: string; pillar: string; identity?: string; theme?: string | null }) =>
+    `${b.title}${b.theme ? ` — ${b.theme}` : ""} [${b.pillar}]${b.identity ? ` · identity: ${b.identity}` : ""}`;
+
+  const h = day.horizon;
+  const horizonLine = h.block
+    ? `HORIZON WALK: ${h.doneToday ? "done today" : `planned ${fmtClock(h.block.start)}–${fmtClock(h.block.end)}`}. ` +
+      `Week ${h.week.done}/7 (floor ${h.week.minimum})${h.week.atRisk ? " — AT RISK" : ""}.`
+    : "";
+
+  const protectedNow = day.blocks
+    .filter((b) => b.flexibility === "protected" && b.end > day.nowMin && b.kind !== "sleep")
+    .slice(0, 3)
+    .map((b) => `${fmtClock(b.start)} ${b.title}`)
+    .join("; ");
+
   return [
-    `RIGHT NOW (${clock} ET, ${s.dayType}): Kaleb should be in "${cur}".`,
-    `NEXT: ${nxt}.`,
-    themes.length ? `TODAY'S ROTATIONS: ${themes.join(", ")}.` : "",
-    `TODAY'S EVENTS: ${events}.`,
+    `RIGHT NOW (${fmtClock(day.nowMin)} ET, ${day.dayType}): Kaleb should be in "${day.current ? label(day.current) : "an open window"}".`,
+    `NEXT: ${day.next ? `${fmtClock(day.next.start)} ${label(day.next)}` : "end of day"}.`,
+    protectedNow ? `PROTECTED AHEAD (do not propose moving without asking): ${protectedNow}.` : "",
+    `SUN: sunrise ${fmtClock(day.sun.sunriseMin)}, sunset ${fmtClock(day.sun.sunsetMin)}${day.sun.estimated ? " (estimated)" : ""}.`,
+    horizonLine,
+    `SLEEP TARGET: ${fmtClock(SLEEP.targetSleepMin)}, wake ${fmtClock(SLEEP.wakeMin)}, ${SLEEP.minHours}h floor.`,
+    `ALIGNMENT SO FAR: ${a.overall}% of elapsed blocks lived (confidence: ${a.confidence}).`,
+    day.conflicts.length ? `CONFLICTS: ${day.conflicts.length} overlapping block(s) need a decision.` : "",
   ].filter(Boolean).join("\n");
 }

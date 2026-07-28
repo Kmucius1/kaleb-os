@@ -15,10 +15,11 @@ const buildNav = (approvalCount: number, taskCount: number): NavSection[] => [
   {
     title: 'COMMAND',
     items: [
-      { href: '/', label: 'Atlas', icon: Sparkles },
-      { href: '/dashboard', label: 'Today', icon: LayoutDashboard },
+      { href: '/', label: 'Home', icon: LayoutDashboard },
       { href: '/schedule', label: 'Schedule', icon: CalendarDays },
-      { href: '/apps', label: 'Apps', icon: LayoutGrid },
+      { href: '/atlas', label: 'Atlas', icon: Sparkles },
+      { href: '/journal', label: 'Journal', icon: ScrollText },
+      { href: '/more', label: 'More', icon: LayoutGrid },
       { href: '/daily-brief', label: 'Daily Brief', icon: FileText },
       { href: '/approvals', label: 'Approvals', icon: CheckCircle2, badge: approvalCount },
     ],
