@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Mic, Pause, Square } from 'lucide-react'
+import ProposalReview, { type Proposal } from './ProposalReview'
 
 // Voice-first journaling. Typing is the fallback, not the default.
 //
@@ -75,6 +76,9 @@ export default function VoiceJournal() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [extracting, setExtracting] = useState(false)
+  const [review, setReview] = useState<{ summary: string; proposals: Proposal[] } | null>(null)
+  const [extractNote, setExtractNote] = useState('')
   const recRef = useRef<Rec | null>(null)
   const baseRef = useRef('')
 
@@ -122,10 +126,29 @@ export default function VoiceJournal() {
         }),
       })
       if (!res.ok) throw new Error('Could not save')
+      const { id } = await res.json()
       recRef.current?.stop()
       setText(''); setMood(null); setEnergy(null); setSaved(true)
       setTimeout(() => setSaved(false), 2000)
       router.refresh()
+
+      // The entry is already safe. Extraction runs after, and a failure here
+      // never costs him the entry — it just means no proposals this time.
+      if (id) {
+        setExtracting(true); setExtractNote('')
+        try {
+          const ex = await fetch('/api/journal/extract', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ journal_id: id }),
+          })
+          if (ex.ok) {
+            const data = await ex.json()
+            if (data.ok === false) setExtractNote(data.reason ?? 'Couldn’t read the entry back.')
+            else setReview({ summary: data.summary ?? '', proposals: data.proposals ?? [] })
+          }
+        } catch { /* entry is saved; proposals are a bonus */ }
+        finally { setExtracting(false) }
+      }
     } catch (e) {
       setError((e as Error).message)
     } finally { setSaving(false) }
@@ -247,6 +270,31 @@ export default function VoiceJournal() {
       >
         {saved ? <><Check size={17} />Saved</> : saving ? 'Saving…' : <><Square size={15} />Save entry</>}
       </button>
+
+      {extracting && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 12, fontSize: 12.5, color: 'var(--muted)' }}>
+          <span className="skel" style={{ width: 16, height: 16, borderRadius: '50%' }} />
+          Reading it back…
+        </div>
+      )}
+
+      {extractNote && (
+        <div style={{
+          marginTop: 12, padding: '11px 13px', borderRadius: 12, fontSize: 12.5, lineHeight: 1.45,
+          background: 'var(--yellow-dim)', border: '1px solid color-mix(in srgb, var(--yellow) 28%, transparent)',
+          color: 'var(--foreground-2)',
+        }}>
+          {extractNote}
+        </div>
+      )}
+
+      {review && (
+        <ProposalReview
+          summary={review.summary}
+          proposals={review.proposals}
+          onDone={() => setReview(null)}
+        />
+      )}
     </div>
   )
 }

@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
 import VoiceJournal from '@/components/rhythm/VoiceJournal'
-import { Brain, ChevronRight } from 'lucide-react'
+import Insights from '@/components/rhythm/Insights'
+import { Brain } from 'lucide-react'
 
 type Entry = { id: string; content: string; kind?: string; created_at: string }
 type Pattern = { id?: string; title?: string; pattern?: string; name?: string; content?: string; description?: string; detail?: string }
@@ -77,30 +78,25 @@ export default function JournalView({ entries, patterns }: { entries: Entry[]; p
       )}
 
       {tab === 'insights' && (
-        patterns.length === 0 ? (
-          <div className="pcard" style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: 28 }}>
-            <Brain size={22} color="var(--muted)" style={{ marginBottom: 8 }} />
-            <div>No insights yet. As you journal, Atlas surfaces patterns here.</div>
-          </div>
-        ) : (
-          <>
-            <div className="rise" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 2px 12px' }}>
-              <span className="label">Insights from Atlas</span>
-              <ChevronRight size={15} color="var(--muted)" />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {patterns.map((p, i) => (
-                <div key={p.id ?? i} className="pcard rise" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <span className="grad-icon" style={{ width: 34, height: 34, background: 'var(--accent-dim)', borderRadius: 11, flexShrink: 0 }}><Brain size={17} color="var(--accent)" /></span>
-                  <div>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--foreground)', lineHeight: 1.4 }}>{p.title || p.pattern || p.name || p.content || 'Pattern detected'}</div>
-                    {(p.description || p.detail) && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3, lineHeight: 1.45 }}>{p.description || p.detail}</div>}
+        <>
+          <Insights />
+          {patterns.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <div className="label" style={{ margin: '0 2px 10px' }}>Patterns Atlas noticed</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {patterns.map((p, i) => (
+                  <div key={p.id ?? i} className="pcard" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <span className="grad-icon" style={{ width: 34, height: 34, background: 'var(--accent-dim)', borderRadius: 11, flexShrink: 0 }}><Brain size={17} color="var(--accent)" /></span>
+                    <div>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4 }}>{p.title || p.pattern || p.name || p.content || 'Pattern detected'}</div>
+                      {(p.description || p.detail) && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3, lineHeight: 1.45 }}>{p.description || p.detail}</div>}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </>
-        )
+          )}
+        </>
       )}
     </>
   )

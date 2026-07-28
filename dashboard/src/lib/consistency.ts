@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { dayTypeOf, dowOfDateStr } from './schedule'
+import { templateFor } from './rhythm/template'
 
 // The unified "did I actually run my life today?" score. It rolls up every kind
 // of progress the app tracks — schedule check-offs, habits, journaling — into a
@@ -31,14 +32,20 @@ function computeDay(dateStr: string, d: DayData, activeHabits: number, blockCoun
 }
 
 async function commonRefs() {
-  const [{ count: activeHabits }, blocksRes] = await Promise.all([
-    supabase.from('habits').select('id', { count: 'exact', head: true }).eq('active', true),
-    supabase.from('schedule_blocks').select('day_type'),
-  ])
-  const blockCounts: Record<string, number> = { weekday: 0, saturday: 0, sunday: 0 }
-  for (const r of blocksRes.data ?? []) blockCounts[(r as any).day_type] = (blockCounts[(r as any).day_type] ?? 0) + 1
+  const { count: activeHabits } = await supabase
+    .from('habits').select('id', { count: 'exact', head: true }).eq('active', true)
+  // Denominator comes from the rhythm template in code, not the schedule_blocks
+  // table — so the score is correct whether or not the table has been reseeded.
+  const blockCounts: Record<string, number> = {
+    weekday: templateFor('weekday').filter(gradable).length,
+    saturday: templateFor('saturday').filter(gradable).length,
+    sunday: templateFor('sunday').filter(gradable).length,
+  }
   return { activeHabits: activeHabits ?? 0, blockCounts }
 }
+
+// Sleep isn't checked off like the other blocks, so it never counts against him.
+const gradable = (b: { kind: string }) => b.kind !== 'sleep'
 
 // Trend of daily scores for the last `n` days (oldest → newest), plus today's
 // full breakdown and the current streak (consecutive days scoring ≥ threshold).

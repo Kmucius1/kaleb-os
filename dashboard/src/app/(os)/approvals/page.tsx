@@ -1,17 +1,30 @@
 import { supabase } from '@/lib/supabase'
 import { formatTime } from '@/lib/utils'
-import { Inbox, Mail, Send, Bell, Zap } from 'lucide-react'
+import { Inbox } from 'lucide-react'
+import ApprovalCard from '@/components/rhythm/ApprovalCard'
 
 export const revalidate = 30
 
 type AgentAction = {
   id: string
   action_type: string | null
-  description: string
+  description?: string | null
+  reasoning?: string | null
   payload: Record<string, unknown> | null
   status: string
   created_at: string
   executed_at: string | null
+}
+
+// Older rows carry a `description`; journal proposals carry their text in the
+// payload. Show whichever exists rather than an empty card.
+function describe(a: AgentAction): string {
+  if (a.description) return a.description
+  const p = a.payload ?? {}
+  const text = typeof p.text === 'string' ? p.text : ''
+  const detail = typeof p.detail === 'string' ? p.detail : ''
+  if (text) return detail ? `${text} — ${detail}` : text
+  return 'Action awaiting your decision'
 }
 
 function statusColor(status: string) {
@@ -22,14 +35,6 @@ function statusColor(status: string) {
     executed: 'var(--blue)',
   }
   return map[status] ?? 'var(--muted)'
-}
-
-function actionIcon(type: string | null) {
-  const t = (type ?? '').toLowerCase()
-  if (t.includes('email') || t.includes('mail')) return Mail
-  if (t.includes('send') || t.includes('post')) return Send
-  if (t.includes('notif') || t.includes('remind')) return Bell
-  return Zap
 }
 
 export default async function ApprovalsPage() {
@@ -70,26 +75,17 @@ export default async function ApprovalsPage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {pending.map((a, i) => {
-              const Icon = actionIcon(a.action_type)
-              return (
-                <div key={a.id} className={`pcard glow rise rise-${Math.min(6, i + 2)}`}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                    <span className="grad-icon" style={{ width: 38, height: 38, background: 'var(--accent-dim)', borderRadius: 12, flexShrink: 0 }}><Icon size={18} color="var(--accent)" /></span>
-                    <span className="pillar-tag" style={{ color: 'var(--accent)', background: 'var(--accent-dim)' }}>
-                      {a.action_type?.toUpperCase() ?? 'ACTION'}
-                    </span>
-                    <span style={{ color: 'var(--muted)', fontSize: 11, marginLeft: 'auto' }}>{formatTime(a.created_at)}</span>
-                  </div>
-                  <div style={{ fontSize: 14, color: 'var(--foreground)', marginBottom: 12, lineHeight: 1.5 }}>
-                    {a.description}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', fontStyle: 'italic', borderTop: '1px solid var(--border)', paddingTop: 11 }}>
-                    Approve or reject below
-                  </div>
-                </div>
-              )
-            })}
+            {pending.map((a, i) => (
+              <div key={a.id} className={`rise rise-${Math.min(6, i + 2)}`}>
+                <ApprovalCard
+                  id={a.id}
+                  actionType={a.action_type}
+                  description={describe(a)}
+                  reasoning={a.reasoning ?? null}
+                  when={formatTime(a.created_at)}
+                />
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -108,7 +104,7 @@ export default async function ApprovalsPage() {
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {a.description}
+                      {describe(a)}
                     </div>
                     <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 2 }}>
                       {a.action_type ?? '—'}
