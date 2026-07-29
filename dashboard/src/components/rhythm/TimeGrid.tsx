@@ -240,7 +240,7 @@ export default function TimeGrid({ day, nowMin, isToday, onChanged }: {
           <span style={{ flex: 1, fontSize: 13, lineHeight: 1.4 }}>{toast.text}</span>
           {toast.undo && (
             <button onClick={toast.undo} className="press" style={{
-              minHeight: 38, padding: '0 14px', borderRadius: 10, cursor: 'pointer', flexShrink: 0,
+              minHeight: 44, padding: '0 16px', borderRadius: 11, cursor: 'pointer', flexShrink: 0,
               background: 'var(--accent)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700,
             }}>
               Undo

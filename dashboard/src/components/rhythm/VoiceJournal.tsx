@@ -198,7 +198,7 @@ export default function VoiceJournal() {
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
         {MOMENTS.filter(m => !m.primary).map(m => (
           <button key={m.key} onClick={() => setMoment(m.key)} className="press" style={{
-            minHeight: 34, padding: '0 12px', borderRadius: 999, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+            minHeight: 44, padding: '0 14px', borderRadius: 999, cursor: 'pointer', fontSize: 12, fontWeight: 600,
             background: moment === m.key ? `color-mix(in srgb, ${m.color} 18%, transparent)` : 'transparent',
             color: moment === m.key ? m.color : 'var(--muted)',
             border: `1px solid ${moment === m.key ? m.color : 'var(--border)'}`,
@@ -261,7 +261,7 @@ export default function VoiceJournal() {
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
         {MOODS.map(m => (
           <button key={m} onClick={() => setMood(mood === m ? null : m)} className="press" style={{
-            minHeight: 34, padding: '0 12px', borderRadius: 999, cursor: 'pointer', fontSize: 12, textTransform: 'capitalize',
+            minHeight: 44, padding: '0 14px', borderRadius: 999, cursor: 'pointer', fontSize: 12, textTransform: 'capitalize',
             background: mood === m ? 'var(--accent-dim)' : 'transparent',
             color: mood === m ? 'var(--accent)' : 'var(--muted)',
             border: `1px solid ${mood === m ? 'var(--accent)' : 'var(--border)'}`,
@@ -272,7 +272,7 @@ export default function VoiceJournal() {
         <span style={{ fontSize: 11.5, color: 'var(--muted)', width: 52 }}>Energy</span>
         {[1, 2, 3, 4, 5].map(n => (
           <button key={n} onClick={() => setEnergy(energy === n ? null : n)} aria-label={`Energy ${n}`} className="press" style={{
-            flex: 1, minHeight: 38, borderRadius: 10, cursor: 'pointer', fontSize: 12.5, fontWeight: 700,
+            flex: 1, minHeight: 44, borderRadius: 11, cursor: 'pointer', fontSize: 13, fontWeight: 700,
             background: energy != null && n <= energy ? 'var(--body)' : 'var(--surface-2)',
             color: energy != null && n <= energy ? '#07100c' : 'var(--muted)',
             border: '1px solid var(--border)',

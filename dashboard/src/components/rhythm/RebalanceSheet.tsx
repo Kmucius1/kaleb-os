@@ -66,7 +66,7 @@ export default function RebalanceSheet({ open, onClose }: { open: boolean; onClo
           <Sparkles size={17} color="var(--accent)" />
           <span className="h-title" style={{ flex: 1, fontSize: 18 }}>Rebalance my day</span>
           <button onClick={onClose} aria-label="Close" className="press" style={{
-            width: 34, height: 34, borderRadius: 10, border: 'none', background: 'var(--surface-2)',
+            width: 44, height: 44, borderRadius: 12, border: 'none', background: 'var(--surface-2)',
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <X size={16} color="var(--foreground-2)" />

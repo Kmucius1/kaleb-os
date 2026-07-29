@@ -135,7 +135,7 @@ export default function ProposalReview({ summary, proposals, onDone }: {
 }
 
 const roundBtn = (bg: string, border: string): React.CSSProperties => ({
-  width: 38, height: 38, borderRadius: '50%', cursor: 'pointer',
+  width: 44, height: 44, borderRadius: '50%', cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: bg, border: border === 'transparent' ? 'none' : `1.5px solid ${border}`,
 })

@@ -63,7 +63,15 @@ export default async function HomePage() {
             {identity && <span style={{ color: pillarColor(day.current?.pillar) }}> · {identity}</span>}
           </p>
         </div>
-        <Link href="/more" className="press" aria-label="More" style={{ color: 'var(--foreground-2)', flexShrink: 0, padding: 4 }}>
+        <Link
+          href="/more"
+          className="press"
+          aria-label="More"
+          style={{
+            color: 'var(--foreground-2)', flexShrink: 0,
+            width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+          }}
+        >
           <LayoutGrid size={21} />
         </Link>
       </header>
@@ -110,10 +118,17 @@ export default async function HomePage() {
       />
 
       <section className="rise rise-6" style={{ marginBottom: 20 }} aria-label="Rest of today">
-        <div className="label" style={{ margin: '0 4px 10px', display: 'flex', justifyContent: 'space-between' }}>
+        <div className="label" style={{ margin: '0 4px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>Rest of today</span>
-          <Link href="/schedule" style={{ color: 'var(--accent)', letterSpacing: 0, textTransform: 'none', fontWeight: 600 }}>
-            Full day <ChevronRight size={11} style={{ display: 'inline', verticalAlign: -1 }} />
+          <Link
+            href="/schedule"
+            className="press"
+            style={{
+              color: 'var(--accent)', letterSpacing: 0, textTransform: 'none', fontWeight: 600,
+              minHeight: 44, display: 'flex', alignItems: 'center', gap: 2, paddingLeft: 12,
+            }}
+          >
+            Full day <ChevronRight size={12} />
           </Link>
         </div>
         <div className="pcard" style={{ padding: '6px 8px' }}>
