@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Mic, Pause, Square } from 'lucide-react'
 import ProposalReview, { type Proposal } from './ProposalReview'
+import { enqueue, queueCount, startOutbox } from '@/lib/rhythm/outbox'
 
 // Voice-first journaling. Typing is the fallback, not the default.
 //
@@ -79,10 +80,14 @@ export default function VoiceJournal() {
   const [extracting, setExtracting] = useState(false)
   const [review, setReview] = useState<{ summary: string; proposals: Proposal[] } | null>(null)
   const [extractNote, setExtractNote] = useState('')
+  const [queued, setQueued] = useState(0)
   const recRef = useRef<Rec | null>(null)
   const baseRef = useRef('')
 
-  useEffect(() => { setMoment(defaultMoment()) }, [])
+  useEffect(() => { setMoment(defaultMoment()); setQueued(queueCount()) }, [])
+
+  // Flush anything written offline as soon as the connection returns.
+  useEffect(() => startOutbox(() => { setQueued(queueCount()); router.refresh() }), [router])
   useEffect(() => {
     const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }
     setSupported(Boolean(w.SpeechRecognition || w.webkitSpeechRecognition))
@@ -116,14 +121,29 @@ export default function VoiceJournal() {
   async function save() {
     if (!text.trim()) return
     setSaving(true); setError('')
+
+    const entry = {
+      content: text.trim(), moment, transcript: text.trim(),
+      mood: mood ?? undefined, energy: energy ?? undefined,
+      pillar: moment === 'trading' ? 'Money' : moment === 'idea' ? 'Mission' : 'Spirit',
+    }
+
+    // No signal — keep it on the device rather than losing what he just said.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      enqueue('/api/journal', entry, 'Journal entry')
+      recRef.current?.stop()
+      setText(''); setMood(null); setEnergy(null); setSaved(true)
+      setQueued(queueCount())
+      setExtractNote('Saved on this device — it will sync when you\u2019re back online.')
+      setTimeout(() => setSaved(false), 2000)
+      setSaving(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/journal', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: text.trim(), moment, transcript: text.trim(),
-          mood: mood ?? undefined, energy: energy ?? undefined,
-          pillar: moment === 'trading' ? 'Money' : moment === 'idea' ? 'Mission' : 'Spirit',
-        }),
+        body: JSON.stringify(entry),
       })
       if (!res.ok) throw new Error('Could not save')
       const { id } = await res.json()
@@ -150,7 +170,12 @@ export default function VoiceJournal() {
         finally { setExtracting(false) }
       }
     } catch (e) {
-      setError((e as Error).message)
+      // The request died mid-flight — queue it rather than blaming him for it.
+      enqueue('/api/journal', entry, 'Journal entry')
+      setText(''); setMood(null); setEnergy(null)
+      setQueued(queueCount())
+      setExtractNote('Couldn\u2019t reach the server, so it\u2019s saved on this device and will sync automatically.')
+      void e
     } finally { setSaving(false) }
   }
 
@@ -275,6 +300,12 @@ export default function VoiceJournal() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 12, fontSize: 12.5, color: 'var(--muted)' }}>
           <span className="skel" style={{ width: 16, height: 16, borderRadius: '50%' }} />
           Reading it back…
+        </div>
+      )}
+
+      {queued > 0 && (
+        <div style={{ marginTop: 12, fontSize: 12, color: 'var(--muted)' }}>
+          {queued} {queued === 1 ? 'entry' : 'entries'} waiting to sync.
         </div>
       )}
 

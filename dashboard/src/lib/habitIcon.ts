@@ -1,4 +1,7 @@
-import { Flower2, NotebookPen, Dumbbell, TrendingUp, Beef, BookOpen, Clapperboard, Wine, CheckCircle2 } from 'lucide-react'
+import {
+  Flower2, NotebookPen, Dumbbell, TrendingUp, Beef, BookOpen, Clapperboard, Wine,
+  CheckCircle2, Moon, Scale, Droplets, Waves,
+} from 'lucide-react'
 
 export function habitIcon(key?: string) {
   switch (key) {
@@ -10,6 +13,10 @@ export function habitIcon(key?: string) {
     case 'read': return BookOpen
     case 'content': return Clapperboard
     case 'alcohol': return Wine
+    case 'sleep': return Moon
+    case 'weight': return Scale
+    case 'water': return Droplets
+    case 'horizon': return Waves
     default: return CheckCircle2
   }
 }

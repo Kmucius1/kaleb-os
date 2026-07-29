@@ -395,6 +395,42 @@ describe("rebalanceDay", () => {
   });
 });
 
+/* ------------------------- overrides / dragging ------------------------- */
+
+describe("per-day overrides", () => {
+  const base = { dateStr: "2026-07-28", sun: sun(H(6, 44), H(20, 9)) };
+
+  it("marks a block as moved only when it actually landed elsewhere", () => {
+    const moved = materializeDay({ ...base, overrides: { gym: { start: H(9, 30), end: H(10, 30) } } });
+    expect(moved.blocks.find((b) => b.key === "gym")!.movedFrom).toEqual({ start: H(9, 0), end: H(10, 0) });
+
+    // An override identical to the template is a no-op, not a change.
+    const noop = materializeDay({ ...base, overrides: { gym: { start: H(9, 0), end: H(10, 0) } } });
+    expect(noop.blocks.find((b) => b.key === "gym")!.movedFrom).toBeUndefined();
+  });
+
+  it("exposes the template times through movedFrom so a revert can find them", () => {
+    const day = materializeDay({ ...base, overrides: { gym: { start: H(12, 0), end: H(13, 0) } } });
+    const gym = day.blocks.find((b) => b.key === "gym")!;
+    expect(gym.start).toBe(H(12, 0));
+    expect(gym.movedFrom).toEqual({ start: H(9, 0), end: H(10, 0) });
+  });
+
+  it("surfaces the overlap a drag creates instead of hiding it", () => {
+    const day = materializeDay({ ...base, overrides: { gym: { start: H(10, 15), end: H(11, 15) } } });
+    const live = day.blocks.filter((b) => b.status !== "skipped" && b.kind !== "sleep");
+    const clashes = findConflicts(live).filter((c) => c.a === "gym" || c.b === "gym");
+    expect(clashes.length).toBeGreaterThan(0);
+  });
+
+  it("keeps protected blocks protected no matter what an override says", () => {
+    const day = materializeDay({ ...base, overrides: { trading: { start: H(8, 0), end: H(10, 0) } } });
+    // The override is honoured (the server guards the write), but the block's
+    // flexibility never degrades — the guard still applies next time.
+    expect(day.blocks.find((b) => b.key === "trading")!.flexibility).toBe("protected");
+  });
+});
+
 /* -------------------------------- sleep -------------------------------- */
 
 describe("sleep protection", () => {

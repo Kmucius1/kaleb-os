@@ -2,12 +2,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
-  Check, ChevronLeft, ChevronRight, Lock, MapPin, Minus, Plus, Sparkles, Sunrise, Sunset, Waves,
+  Check, ChevronLeft, ChevronRight, List as ListIcon, Lock, MapPin, Minus, Move, Plus, Sparkles,
+  Sunrise, Sunset, Waves,
 } from 'lucide-react'
 import { blockIcon } from '@/lib/blockIcon'
 import { pillarColor } from '@/lib/rhythm/pillars'
 import { fmtMin } from '@/lib/rhythm/engine'
 import RebalanceSheet from './RebalanceSheet'
+import TimeGrid from './TimeGrid'
 import type { PlannedBlock } from '@/lib/rhythm/types'
 import type { ResolvedDay } from '@/lib/rhythm/day'
 
@@ -135,6 +137,8 @@ function DayView({ date, setDate, isToday, day, now, loading, failed, onRetry, o
   date: string; setDate: (s: string) => void; isToday: boolean; day: ResolvedDay; now: number
   loading: boolean; failed: boolean; onRetry: () => void; onChange: () => void
 }) {
+  // Grid is where you reshape the day; list is where you read and tick it off.
+  const [layout, setLayout] = useState<'list' | 'grid'>('list')
   const conflictKeys = new Set(day.conflicts.flatMap(c => [c.a, c.b]))
   const items = [...day.blocks].sort((a, b) => a.start - b.start)
 
@@ -181,6 +185,27 @@ function DayView({ date, setDate, isToday, day, now, loading, failed, onRetry, o
         </button>
       </div>
 
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        {(['list', 'grid'] as const).map(l => (
+          <button
+            key={l}
+            onClick={() => setLayout(l)}
+            aria-pressed={layout === l}
+            className="press"
+            style={{
+              flex: 1, minHeight: 40, borderRadius: 12, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              background: layout === l ? 'var(--accent-dim)' : 'var(--surface)',
+              border: `1px solid ${layout === l ? 'color-mix(in srgb, var(--accent) 40%, transparent)' : 'var(--border)'}`,
+              color: layout === l ? 'var(--accent)' : 'var(--foreground-2)',
+              fontSize: 12.5, fontWeight: 600,
+            }}
+          >
+            {l === 'list' ? <><ListIcon size={14} />List</> : <><Move size={14} />Drag</>}
+          </button>
+        ))}
+      </div>
+
       {failed && (
         <div className="pcard" style={{ marginBottom: 12, textAlign: 'center', padding: 20 }}>
           <p style={{ fontSize: 13.5, color: 'var(--foreground-2)', margin: '0 0 12px' }}>Couldn’t load this day.</p>
@@ -197,7 +222,11 @@ function DayView({ date, setDate, isToday, day, now, loading, failed, onRetry, o
         </div>
       )}
 
-      {!loading && !failed && (
+      {!loading && !failed && layout === 'grid' && (
+        <TimeGrid day={day} nowMin={now} isToday={isToday} onChanged={onChange} />
+      )}
+
+      {!loading && !failed && layout === 'list' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {rows.map(r => r.node)}
           {rows.length === 0 && (

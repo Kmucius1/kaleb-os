@@ -144,6 +144,9 @@ export function materializeDay(input: MaterializeInput): {
     const start = ov?.start ?? b.start;
     const end = ov?.end ?? b.end;
     const deferredReason = deferredReasons.get(b.key);
+    // Only claim a block moved when it actually landed somewhere else — an
+    // override that matches the template is a no-op, not a change.
+    const actuallyMoved = ov != null && (ov.start !== b.start || ov.end !== b.end);
     return {
       ...b,
       date: input.dateStr,
@@ -152,7 +155,7 @@ export function materializeDay(input: MaterializeInput): {
       locked: lockedKeys.has(b.key),
       status: ov?.status ?? (completed.has(b.key) ? "done" : deferredReason ? "skipped" : "planned"),
       ...(deferredReason ? { reason: deferredReason } : {}),
-      ...(ov ? { movedFrom: { start: b.start, end: b.end } } : {}),
+      ...(actuallyMoved ? { movedFrom: { start: b.start, end: b.end } } : {}),
     };
   });
 
