@@ -1,16 +1,17 @@
 // Server-side glue: pull real sun times, real events, real completions and
 // hand the pure engine everything it needs.
 //
-// Storage note (interim): per-day approved overrides and Horizon check-ins are
-// kept in `kalebos_config` under `day:<date>` / `horizon:<date>` keys until
-// migration 0024 adds first-class tables. Both are read through the accessors
-// below, so moving them later is a one-file change.
+// Storage note: per-day changes live in `schedule_instances` and Horizon
+// check-ins in `horizon_walks` (migration 0024). Where that migration has not
+// been applied yet, the accessors below fall back to the original
+// `kalebos_config` blobs (`day:<date>` / `horizon_log`) so an older database
+// keeps working — see `usingRhythmTables()`.
 
 import { supabase } from "../supabase";
 import { materializeDay, rebalanceDay, dowOfDateStr } from "./engine";
 import { estimateSun, horizonWeek, minutesInZone, zoneOffsetMinutes, type SunTimes, type HorizonChoice } from "./sun";
-import { dayTypeOf } from "./template";
-import type { PlannedBlock } from "./types";
+import { dayTypeOf, templateFor } from "./template";
+import type { PlannedBlock, TemplateBlock } from "./types";
 
 export const TZ = "America/New_York";
 
@@ -108,15 +109,163 @@ async function setConfigJson(key: string, value: unknown): Promise<void> {
   await supabase.from("kalebos_config").upsert({ key, value: JSON.stringify(value) }, { onConflict: "key" });
 }
 
+// ---------------------------------------------------------------------------
+// Which storage the rhythm is on.
+//
+// Probed once per process rather than assumed, so deploy order doesn't matter:
+// ship the code before the migration and it keeps using config; apply the
+// migration and the next cold start picks up the real tables. Once 0024 is
+// applied everywhere, the `legacy*` functions and this probe can be deleted.
+// ---------------------------------------------------------------------------
+
+let rhythmTables: Promise<boolean> | null = null;
+
+export function usingRhythmTables(): Promise<boolean> {
+  rhythmTables ??= (async () => {
+    try {
+      const { error } = await supabase.from("schedule_instances").select("id").limit(1);
+      return !error;
+    } catch {
+      return false;
+    }
+  })();
+  return rhythmTables;
+}
+
 export type DayState = {
   overrides: Record<string, { start: number; end: number; status?: PlannedBlock["status"] }>;
   locked: string[];
 };
 
-export const getDayState = (dateStr: string) =>
-  getConfigJson<DayState>(`day:${dateStr}`, { overrides: {}, locked: [] });
+const EMPTY_DAY: DayState = { overrides: {}, locked: [] };
 
-export const setDayState = (dateStr: string, state: DayState) => setConfigJson(`day:${dateStr}`, state);
+/**
+ * Everything that makes one dated day differ from the rhythm: blocks that were
+ * moved, shortened, skipped or pinned. Stored sparsely — a block that still
+ * matches the template has no row, so it reads as untouched rather than as
+ * "moved from" its own start time.
+ */
+export async function getDayState(dateStr: string): Promise<DayState> {
+  if (!(await usingRhythmTables())) return getConfigJson<DayState>(`day:${dateStr}`, EMPTY_DAY);
+
+  const { data, error } = await supabase
+    .from("schedule_instances")
+    .select("block_key,start_min,end_min,status,locked")
+    .eq("instance_date", dateStr);
+  if (error || !data) return EMPTY_DAY;
+
+  const state: DayState = { overrides: {}, locked: [] };
+  for (const row of data as InstanceRow[]) {
+    state.overrides[row.block_key] = {
+      start: row.start_min,
+      end: row.end_min,
+      ...(row.status === "skipped" ? { status: "skipped" as const } : {}),
+    };
+    if (row.locked) state.locked.push(row.block_key);
+  }
+  return state;
+}
+
+export async function setDayState(dateStr: string, state: DayState): Promise<void> {
+  if (!(await usingRhythmTables())) return setConfigJson(`day:${dateStr}`, state);
+
+  const lockedKeys = new Set(state.locked);
+  const keys = [...new Set([...Object.keys(state.overrides), ...state.locked])];
+  const meta = await blockMeta(dateStr, keys);
+
+  const rows = keys.flatMap((key) => {
+    // A key we can no longer explain (template edited out from under a stored
+    // day) is dropped rather than written as a row with invented columns.
+    const m = meta.get(key);
+    if (!m) return [];
+    const ov = state.overrides[key];
+    const start = ov?.start ?? m.start;
+    const end = ov?.end ?? m.end;
+    const moved = start !== m.start || end !== m.end;
+    return [
+      {
+        instance_date: dateStr,
+        block_key: key,
+        title: m.title,
+        pillar: m.pillar,
+        pillar2: m.pillar2 ?? null,
+        identity: m.identity ?? null,
+        kind: m.kind,
+        start_min: start,
+        end_min: end,
+        flexibility: m.flexibility,
+        priority: m.priority,
+        min_minutes: m.minMinutes ?? null,
+        pref_minutes: m.prefMinutes ?? null,
+        energy: m.energy,
+        location: m.location ?? null,
+        travel_min: m.travelMinutes ?? null,
+        status: ov?.status ?? "planned",
+        locked: lockedKeys.has(key),
+        moved_from_start: moved ? m.start : null,
+        moved_from_end: moved ? m.end : null,
+        updated_at: new Date().toISOString(),
+      },
+    ];
+  });
+
+  if (rows.length) {
+    await supabase.from("schedule_instances").upsert(rows, { onConflict: "instance_date,block_key" });
+  }
+
+  // Anything no longer overridden or pinned goes back to the rhythm. Read the
+  // existing keys and diff in JS rather than building a negated `in` filter —
+  // block keys are user-facing slugs and don't belong in a filter string.
+  const { data: existing } = await supabase
+    .from("schedule_instances")
+    .select("block_key")
+    .eq("instance_date", dateStr);
+  const stale = (existing ?? []).map((r: { block_key: string }) => r.block_key).filter((k) => !keys.includes(k));
+  if (stale.length) {
+    await supabase.from("schedule_instances").delete().eq("instance_date", dateStr).in("block_key", stale);
+  }
+}
+
+type InstanceRow = {
+  block_key: string;
+  start_min: number;
+  end_min: number;
+  status: PlannedBlock["status"];
+  locked: boolean;
+};
+
+/**
+ * The template (or dated event) behind each key, for the columns an instance
+ * row needs. Only ever read — writing an instance never touches the rhythm.
+ */
+async function blockMeta(dateStr: string, keys: string[]): Promise<Map<string, TemplateBlock>> {
+  const map = new Map<string, TemplateBlock>();
+  const tpl = templateFor(dayTypeOf(dowOfDateStr(dateStr)));
+  for (const key of keys) {
+    const found = tpl.find((b) => b.key === key);
+    if (found) map.set(key, found);
+  }
+
+  const eventIds = keys.filter((k) => k.startsWith("event:")).map((k) => k.slice("event:".length));
+  if (eventIds.length) {
+    const { data } = await supabase.from("schedule_events").select("*").in("id", eventIds);
+    for (const e of data ?? []) {
+      map.set(`event:${e.id}`, {
+        key: `event:${e.id}`,
+        title: e.title,
+        pillar: (e.pillar as TemplateBlock["pillar"]) ?? "Mission",
+        kind: "event",
+        start: e.start_min ?? 0,
+        end: e.end_min ?? (e.start_min ?? 0) + 60,
+        flexibility: "protected",
+        priority: 1,
+        energy: "medium",
+        location: e.location ?? undefined,
+      });
+    }
+  }
+  return map;
+}
 
 export type HorizonPrefs = {
   preference: HorizonChoice;
@@ -127,24 +276,72 @@ export type HorizonPrefs = {
 export const getHorizonPrefs = () =>
   getConfigJson<HorizonPrefs>("horizon_prefs", { preference: "either", durationMinutes: 45, travelMinutes: 12 });
 
-export type HorizonLog = { date: string; window: "sunrise" | "sunset"; method: string; note?: string };
+export type HorizonLog = {
+  date: string;
+  window: "sunrise" | "sunset";
+  method: string;
+  /** silence | walking-meditation | gratitude | voice-journal | content | recovery | watch */
+  mode?: string;
+  note?: string;
+};
 
 export async function getHorizonLog(from: string, to: string): Promise<HorizonLog[]> {
-  const all = await getConfigJson<HorizonLog[]>("horizon_log", []);
-  return all.filter((h) => h.date >= from && h.date <= to);
+  if (!(await usingRhythmTables())) {
+    const all = await getConfigJson<HorizonLog[]>("horizon_log", []);
+    return all.filter((h) => h.date >= from && h.date <= to);
+  }
+
+  const { data, error } = await supabase
+    .from("horizon_walks")
+    .select("walk_date,window,method,mode,note")
+    .gte("walk_date", from)
+    .lte("walk_date", to)
+    .order("walk_date");
+  if (error || !data) return [];
+  return data.map((r: HorizonRow) => ({
+    date: r.walk_date,
+    window: r.window,
+    method: r.method,
+    ...(r.mode ? { mode: r.mode } : {}),
+    ...(r.note ? { note: r.note } : {}),
+  }));
 }
 
 export async function logHorizonWalk(entry: HorizonLog): Promise<void> {
-  const all = await getConfigJson<HorizonLog[]>("horizon_log", []);
-  const next = [...all.filter((h) => h.date !== entry.date), entry].sort((a, b) => a.date.localeCompare(b.date));
-  // Keep a rolling year — this is a config row, not a warehouse.
-  await setConfigJson("horizon_log", next.slice(-400));
+  if (!(await usingRhythmTables())) {
+    const all = await getConfigJson<HorizonLog[]>("horizon_log", []);
+    const next = [...all.filter((h) => h.date !== entry.date), entry].sort((a, b) => a.date.localeCompare(b.date));
+    // Keep a rolling year — this is a config row, not a warehouse.
+    return setConfigJson("horizon_log", next.slice(-400));
+  }
+
+  await supabase.from("horizon_walks").upsert(
+    {
+      walk_date: entry.date,
+      window: entry.window,
+      method: entry.method,
+      mode: entry.mode ?? null,
+      note: entry.note ?? null,
+    },
+    { onConflict: "walk_date" }
+  );
 }
 
 export async function removeHorizonWalk(dateStr: string): Promise<void> {
-  const all = await getConfigJson<HorizonLog[]>("horizon_log", []);
-  await setConfigJson("horizon_log", all.filter((h) => h.date !== dateStr));
+  if (!(await usingRhythmTables())) {
+    const all = await getConfigJson<HorizonLog[]>("horizon_log", []);
+    return setConfigJson("horizon_log", all.filter((h) => h.date !== dateStr));
+  }
+  await supabase.from("horizon_walks").delete().eq("walk_date", dateStr);
 }
+
+type HorizonRow = {
+  walk_date: string;
+  window: "sunrise" | "sunset";
+  method: string;
+  mode: string | null;
+  note: string | null;
+};
 
 /** Rotation themes ("University on wheels" per weekday) — preserved from the old engine. */
 async function resolveThemes(dow: number): Promise<Record<string, string | null>> {

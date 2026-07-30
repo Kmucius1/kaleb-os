@@ -25,6 +25,7 @@ export async function POST(req: Request) {
       date,
       window: parsed.data.window ?? 'sunset',
       method: parsed.data.method ?? 'manual',
+      mode: parsed.data.mode,
       note: parsed.data.note,
     })
   } else {

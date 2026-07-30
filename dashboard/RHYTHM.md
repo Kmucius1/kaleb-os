@@ -109,12 +109,22 @@ evening on those days.
 | What | Where | Why |
 |---|---|---|
 | The rhythm template | `src/lib/rhythm/template.ts` | Reviewable in a diff |
-| Dated changes | `kalebos_config` key `day:<YYYY-MM-DD>` | Interim — see migration 0024 |
-| Horizon check-ins | `kalebos_config` key `horizon_log` | Interim — see migration 0024 |
+| Dated changes | `schedule_instances` table | One row per *changed* block per day |
+| Horizon check-ins | `horizon_walks` table | First-class, with method and mode |
 | Preferences | `kalebos_config` keys `horizon_prefs`, `location` | |
 | Check-offs | `completions` table, keyed by block **slug** + date | Survives template edits |
 | Dated events | `schedule_events` table | KalebOS is the calendar |
 | Notification rows | `schedule_blocks` table | Projection of the template |
+
+`schedule_instances` is **sparse**. A block only gets a row once it is actually
+moved, shortened, skipped or pinned; a block still sitting where the rhythm put
+it has no row at all. That is the same honesty rule as before — a block reads as
+untouched rather than as "moved from" its own start time — and it means tomorrow
+still starts clean from the template with nothing to clear down.
+
+Writing an instance never touches `schedule_blocks` or `template.ts`. The
+template is read to fill in a row's `title` / `pillar` / `flexibility`; it is
+never written back.
 
 `schedule_blocks` is a **projection**, not the source. Run
 `node scripts/seed-rhythm.mjs --apply` to re-render it from the template (it
@@ -125,22 +135,38 @@ reads it — it exists for the notification cron and older surfaces.
 
 ## Migration 0024
 
-`supabase/migrations/0024_rhythm.sql` adds first-class tables for what is
-currently held in config: `schedule_instances`, `horizon_walks`, and the journal
-enrichment columns (`moment`, `transcript`, `summary`, `energy`, `entities`).
+`supabase/migrations/0024_rhythm.sql` is what creates `schedule_instances`,
+`horizon_walks`, and the journal enrichment columns (`moment`, `transcript`,
+`summary`, `energy`, `entities`).
 
-Until it is applied:
+`day.ts` **probes for those tables once per process** rather than assuming them,
+so deploy order doesn't matter: ship the code first and it keeps using the old
+`kalebos_config` blobs (`day:<date>`, `horizon_log`); apply the migration and the
+next cold start moves onto the real tables with no redeploy. `POST /api/journal`
+does the same thing at column level — it retries without the extended columns and
+returns `degraded: true` rather than failing.
 
-- `day.ts` reads and writes the config-backed equivalents through accessors, so
-  switching over is a one-file change,
-- `POST /api/journal` retries without the extended columns and returns
-  `degraded: true` rather than failing.
+Once the migration is applied everywhere, `usingRhythmTables()` and the
+config-backed branches in `day.ts` can be deleted outright.
 
 To apply it you need a Supabase personal access token for the KalebOS account in
 `dashboard/.env.local` as `SUPABASE_ACCESS_TOKEN`, then:
 
 ```bash
 scripts/apply-migration.sh supabase/migrations/0024_rhythm.sql
+```
+
+A `401 Unauthorized` from that script means the token is expired or revoked, not
+that the SQL is wrong — mint a fresh one at
+<https://supabase.com/dashboard/account/tokens> while signed into the KalebOS
+account.
+
+**Verify it landed** (both should return `200`, not `404`):
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' \
+  "$SUPABASE_URL/rest/v1/schedule_instances?select=id&limit=1" \
+  -H "apikey: $SUPABASE_SECRET_KEY" -H "Authorization: Bearer $SUPABASE_SECRET_KEY"
 ```
 
 ---
