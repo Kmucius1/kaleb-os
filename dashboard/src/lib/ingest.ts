@@ -9,6 +9,56 @@ export type IngestResult = { summary: string; filed: number; actions: { tool: st
 // Only captures containing this phrase are forwarded — everything else stays in Kaleb OS only.
 const TRADING_SESSION_CODE = /start\s+trading\s+session/i;
 
+// Spoken code words Kaleb can say at the start of any PLAUD recording (hands-free,
+// no app interaction needed) to force reliable categorization instead of leaving
+// it to the model to guess from content alone. Checked against the transcript AND
+// the PLAUD recording name/source label, so a renamed file works too.
+type CaptureCode = { pattern: RegExp; hint: (m: RegExpMatchArray) => string };
+const CAPTURE_CODES: CaptureCode[] = [
+  {
+    pattern: TRADING_SESSION_CODE,
+    hint: () =>
+      "TRADING SESSION (code word detected) — file the process via log_trade even if it's narration, not just a clean entry/exit recap.",
+  },
+  {
+    pattern: /start\s+client\s+meeting\b(?:[:,\-]?\s*(?:with\s+)?([a-z0-9 &.'-]{2,40}))?/i,
+    hint: (m) =>
+      `CLIENT MEETING (code word detected)${m[1] ? ` with "${m[1].trim()}"` : ""} — file via update_client (match the client by name${m[1] ? `, try "${m[1].trim()}"` : ""}, note = full recap), and add_task for any follow-ups/commitments mentioned.`,
+  },
+  {
+    pattern: /start\s+board\s+meeting/i,
+    hint: () =>
+      'BOARD MEETING (code word detected) — file the discussion/decisions via add_journal (kind=\'note\', content prefixed "Board meeting:"), and add_task for every commitment or follow-up. This is a formal meeting record, not casual chatter — don\'t skip it.',
+  },
+  {
+    pattern: /start\s+(?:office|work)\s+session/i,
+    hint: () =>
+      "OFFICE / WORK SESSION (code word detected) — focused work time, not personal reflection. File progress via log_project, todos via add_task, strategic notes via log_idea (category='business'). Skip add_journal unless he explicitly reflects on how he's feeling.",
+  },
+  {
+    pattern: /start\s+(?:family|personal)\s+time/i,
+    hint: () =>
+      "FAMILY / PERSONAL TIME (code word detected) — file via add_journal (kind='reflection' or 'gratitude', whichever fits) and remember for lasting facts about people close to him. Do NOT file business/work items from this stretch even if mentioned in passing, unless he explicitly says to log something.",
+  },
+  {
+    pattern: /start\s+(?:side\s+hustle|project)\b(?:[:,\-]?\s*([a-z0-9 &.'-]{2,40}))?/i,
+    hint: (m) =>
+      `SIDE HUSTLE / PROJECT WORK (code word detected)${m[1] ? ` on "${m[1].trim()}"` : ""} — file the update via log_project (name${m[1] ? ` = "${m[1].trim()}"` : ", inferred from context"}), log_endeavor if he mentions revenue/income for it, and add_task for follow-ups.`,
+  },
+];
+
+// Scan transcript + source label for any code words and turn matches into
+// explicit routing instructions injected into the ingest system prompt.
+function detectCaptureCodeHints(transcript: string, source?: string): string[] {
+  const text = `${source || ""}\n${transcript}`;
+  const hints: string[] = [];
+  for (const code of CAPTURE_CODES) {
+    const m = text.match(code.pattern);
+    if (m) hints.push(code.hint(m));
+  }
+  return hints;
+}
+
 // If Kaleb said the code word, forward the FULL narration to Trade Print so it lands
 // as a trading session (his live setup/chart commentary). Best-effort, never blocks ingest.
 async function maybeForwardTradingSession(transcript: string, source?: string): Promise<void> {
@@ -38,6 +88,7 @@ export async function ingestTranscript(transcript: string, source?: string): Pro
   void maybeForwardTradingSession(String(transcript), source);
 
   const { persona } = await getContext();
+  const codeHints = detectCaptureCodeHints(String(transcript), source);
   const system = [
     persona || "You are Atlas, Kaleb's operating system.",
     "\nINGEST MODE. Kaleb just captured the following (via " + (source || "voice/PLAUD") + "). It's raw and unstructured — a meeting, a brain-dump, or a trade recap.",
@@ -51,6 +102,12 @@ export async function ingestTranscript(transcript: string, source?: string): Pro
     "- A lasting fact about Kaleb (preference, how he works, goal) → remember",
     "- An email/text he wants sent → draft_email (goes to approval, never sent)",
     "BE COMPLETE, don't be conservative: if he mentions a meditation or how he felt → ALWAYS add_journal. If he mentions ANY trade → ALWAYS log_trade (capture the process/transcript even if it was a clean trade). A content idea for a brand → log_content_idea (brand me|ai|trading), not just log_idea. Capture everything real.",
+    ...(codeHints.length
+      ? [
+          "\nSPOKEN CODE WORDS DETECTED — Kaleb said one of his category triggers at the start of this capture. Follow these over guessing from content alone:",
+          ...codeHints.map((h) => `- ${h}`),
+        ]
+      : []),
     "After filing everything, reply with a tight bullet summary of exactly what you logged (and flag anything ambiguous you skipped).",
   ].join("\n");
 
