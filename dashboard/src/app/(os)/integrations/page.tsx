@@ -3,7 +3,7 @@ import { Link2, Mail, Mic, Database, Workflow, Bot, Sparkles, TrendingUp, Cloud 
 export default function IntegrationsPage() {
   const integrations = [
     { name: 'Gmail', status: 'active', detail: 'Polling every 15 min via n8n workflow', color: 'var(--blue)', icon: Mail },
-    { name: 'PLAUD', status: 'active', detail: 'Webhook at n8n.kalebos.app/webhook/plaud-capture', color: 'var(--green)', icon: Mic },
+    { name: 'PLAUD', status: 'active', detail: 'Vercel cron pulls + files new recordings every 30 min', color: 'var(--green)', icon: Mic },
     { name: 'Supabase', status: 'active', detail: 'MCP connection · project eafrjiqjelumqgoefbfd', color: 'var(--green)', icon: Database },
     { name: 'n8n', status: 'active', detail: 'Self-hosted at n8n.kalebos.app · 2 workflows active', color: 'var(--yellow)', icon: Workflow },
     { name: 'Atlas', status: 'active', detail: 'In-app AI assistant', color: 'var(--accent)', icon: Bot },
