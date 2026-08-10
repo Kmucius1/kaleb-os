@@ -56,6 +56,21 @@ export async function GET(request: Request) {
           continue;
         }
         const r = await ingestTranscript(transcript, `PLAUD: ${f.name || f.id}`);
+        if (r.error) {
+          // Filing itself failed (e.g. a transient OpenRouter error) — same treatment as a
+          // thrown exception: don't dedup within the grace window so it's retried, and once
+          // past it, record the REAL error instead of a blank summary that looks like "done".
+          const recordedAt = f.start_at ?? f.created_at;
+          const ageMs = recordedAt ? Date.now() - new Date(recordedAt).getTime() : Infinity;
+          log.errors = (log.errors as number) + 1;
+          results.push({ file_id: f.id, name: f.name, error: r.error });
+          if (ageMs < TRANSCRIPT_GRACE_MS) continue;
+          await supabase.from("plaud_ingested").insert({
+            file_id: f.id, name: f.name ?? null, recorded_at: f.start_at ?? null,
+            summary: `(filing failed after 48h: ${r.error})`, filed: 0,
+          });
+          continue;
+        }
         await supabase.from("plaud_ingested").insert({
           file_id: f.id, name: f.name ?? null,
           recorded_at: f.start_at ?? f.created_at ?? null,
