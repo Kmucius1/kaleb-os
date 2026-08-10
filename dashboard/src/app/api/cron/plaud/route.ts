@@ -23,7 +23,12 @@ export async function GET(request: Request) {
     return Response.json({ ok: false, error: "PLAUD_REFRESH_TOKEN not set" }, { status: 200 });
   }
 
-  const log: Record<string, unknown> = { filed: 0, skipped: 0, errors: 0 };
+  // PLAUD transcribes AFTER a recording is listed — a file fetched right after
+  // upload often has no transcript source yet. Give it this long to show up
+  // before giving up for good, instead of dead-ending it on the first empty read.
+  const TRANSCRIPT_GRACE_MS = 48 * 60 * 60 * 1000;
+
+  const log: Record<string, unknown> = { filed: 0, skipped: 0, pending: 0, errors: 0 };
   try {
     const token = await plaudAccessToken();
     const files = await plaudListFiles(token, 30);
@@ -38,8 +43,16 @@ export async function GET(request: Request) {
       if (seen.has(f.id)) { log.skipped = (log.skipped as number) + 1; continue; }
       try {
         const transcript = await plaudTranscript(token, f.id);
-        if (!transcript.trim()) { // nothing usable — mark filed so we don't retry forever
-          await supabase.from("plaud_ingested").insert({ file_id: f.id, name: f.name, recorded_at: f.start_at ?? null, summary: "(empty transcript)", filed: 0 });
+        if (!transcript.trim()) {
+          const recordedAt = f.start_at ?? f.created_at;
+          const ageMs = recordedAt ? Date.now() - new Date(recordedAt).getTime() : Infinity;
+          if (ageMs < TRANSCRIPT_GRACE_MS) {
+            // Still transcribing on PLAUD's side — don't dedup yet, retry next run.
+            log.pending = (log.pending as number) + 1;
+            continue;
+          }
+          // Past the grace window and still nothing — genuinely empty (too short/silent). Give up for good.
+          await supabase.from("plaud_ingested").insert({ file_id: f.id, name: f.name, recorded_at: f.start_at ?? null, summary: "(empty transcript — no content after 48h)", filed: 0 });
           continue;
         }
         const r = await ingestTranscript(transcript, `PLAUD: ${f.name || f.id}`);
