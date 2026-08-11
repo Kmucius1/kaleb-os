@@ -1,9 +1,46 @@
 import { Link2, Mail, Mic, Database, Workflow, Bot, Sparkles, TrendingUp, Cloud } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
-export default function IntegrationsPage() {
+export const revalidate = 60
+
+type Heartbeat = { at?: string; listed?: number; filed?: number; pending?: number; errors?: number; error?: string; waiting_on_plaud?: string[] }
+
+// The PLAUD row reports the real state of the sync instead of a hardcoded
+// "active". A recording PLAUD hasn't transcribed can sit unfiled indefinitely —
+// that has to be visible here, not buried in a cron log.
+function plaudRow(hb: Heartbeat | null) {
+  const base = { name: 'PLAUD', icon: Mic }
+  if (!hb?.at) return { ...base, status: 'unknown', detail: 'No sync has reported in yet', color: 'var(--muted)' }
+
+  const mins = Math.round((Date.now() - new Date(hb.at).getTime()) / 60000)
+  const ago = mins < 60 ? `${mins}m ago` : `${Math.round(mins / 60)}h ago`
+
+  if (hb.error) return { ...base, status: 'error', detail: `Sync failing (${ago}): ${hb.error}`, color: 'var(--red)' }
+  // Cron is every 30 min — anything past ~90 means it stopped firing.
+  if (mins > 90) return { ...base, status: 'stalled', detail: `Last sync ${ago} — cron may have stopped firing`, color: 'var(--red)' }
+
+  const waiting = hb.pending ?? 0
+  if (waiting > 0) {
+    const names = (hb.waiting_on_plaud ?? []).slice(0, 2).join(', ')
+    return {
+      ...base,
+      status: `${waiting} waiting`,
+      detail: `${waiting} recording${waiting > 1 ? 's' : ''} uploaded but not transcribed by PLAUD${names ? ` — ${names}` : ''}`,
+      color: 'var(--yellow)',
+    }
+  }
+  return { ...base, status: 'active', detail: `Synced ${ago} · ${hb.listed ?? 0} recordings, all filed`, color: 'var(--green)' }
+}
+
+export default async function IntegrationsPage() {
+  const { data: cfg } = await supabase
+    .from('kalebos_config').select('value').eq('key', 'plaud_sync_last').maybeSingle()
+  let hb: Heartbeat | null = null
+  try { hb = cfg?.value ? JSON.parse(cfg.value) : null } catch { hb = null }
+
   const integrations = [
     { name: 'Gmail', status: 'active', detail: 'Polling every 15 min via n8n workflow', color: 'var(--blue)', icon: Mail },
-    { name: 'PLAUD', status: 'active', detail: 'Vercel cron pulls + files new recordings every 30 min', color: 'var(--green)', icon: Mic },
+    plaudRow(hb),
     { name: 'Supabase', status: 'active', detail: 'MCP connection · project eafrjiqjelumqgoefbfd', color: 'var(--green)', icon: Database },
     { name: 'n8n', status: 'active', detail: 'Self-hosted at n8n.kalebos.app · 2 workflows active', color: 'var(--yellow)', icon: Workflow },
     { name: 'Atlas', status: 'active', detail: 'In-app AI assistant', color: 'var(--accent)', icon: Bot },
