@@ -1,7 +1,9 @@
 import { ingestTranscript, ingestAuthorized } from "@/lib/ingest";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+// A single 30k-char section of a long recording routinely takes over two
+// minutes to file; 120s returned a platform error page instead of a result.
+export const maxDuration = 300;
 
 // POST /api/ingest/transcript  { transcript, source? }
 // Turns a PLAUD recording / voice memo / brain-dump into filed Kaleb OS records.
