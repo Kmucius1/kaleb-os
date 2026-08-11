@@ -135,6 +135,8 @@ for (const t of work.filter(t => verdicts[t.id]?.owner === 'kaleb' && verdicts[t
 if (!WRITE) { console.log('\nDry run. Re-run with --write to save.'); process.exit(0) }
 
 let wrote = 0
+const failed = []
+const unscored = work.filter(t => !verdicts[t.id])
 for (const t of work) {
   const v = verdicts[t.id]
   if (!v) continue
@@ -144,7 +146,7 @@ for (const t of work) {
     body: JSON.stringify({ ...v, dedupe_key: dedupeKey(t.title), triaged_at: new Date().toISOString(), updated_at: new Date().toISOString() }),
   })
   if (res.ok) wrote++
-  else console.error(`  write failed ${t.id}: ${(await res.text()).slice(0, 160)}`)
+  else failed.push(`${t.id} P${v.priority}: ${(await res.text()).slice(0, 200)}`)
 }
 for (const d of dupes) {
   await sb(`tasks?id=eq.${d.id}`, {
@@ -152,4 +154,13 @@ for (const d of dupes) {
     body: JSON.stringify({ status: 'dismissed', dismissed_at: new Date().toISOString(), triaged_at: new Date().toISOString(), updated_at: new Date().toISOString() }),
   })
 }
-console.log(`\n✅ wrote ${wrote} triage verdict(s), dismissed ${dupes.length} duplicate(s).`)
+// A partial write is the dangerous outcome: the rows that fail are not random,
+// they're the ones the model scored highest, and a summary that only counts
+// successes reads as "done" while the Now bucket sits empty.
+console.log(`\n${failed.length || unscored.length ? '⚠️ ' : '✅'} wrote ${wrote} verdict(s), dismissed ${dupes.length} duplicate(s).`)
+if (unscored.length) console.log(`   ${unscored.length} task(s) the model never scored — re-run to pick them up.`)
+if (failed.length) {
+  console.log(`   ${failed.length} write(s) REJECTED by the database:`)
+  for (const f of failed.slice(0, 5)) console.log(`     ${f}`)
+  process.exitCode = 1
+}
