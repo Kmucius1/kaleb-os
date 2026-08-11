@@ -116,6 +116,7 @@ export async function ingestTranscript(transcript: string, source?: string): Pro
     { role: "user", content: String(transcript) },
   ];
   const actions: { tool: string; args: unknown }[] = [];
+  let nudged = false;
 
   for (let i = 0; i < 8; i++) {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -136,6 +137,21 @@ export async function ingestTranscript(transcript: string, source?: string): Pro
         actions.push({ tool: tc.function.name, args });
         messages.push({ role: "tool", tool_call_id: tc.id, name: tc.function.name, content: JSON.stringify(result) });
       }
+      continue;
+    }
+
+    // The model sometimes answers with a confident recap ("Tasks Added: ...")
+    // WITHOUT ever calling a tool, so nothing is actually saved and the capture
+    // is silently lost. If it filed nothing off a real transcript, call that out
+    // once and make it do the work before we accept the answer.
+    if (actions.length === 0 && !nudged && String(transcript).length > 500) {
+      nudged = true;
+      messages.push(m);
+      messages.push({
+        role: "user",
+        content:
+          "You did not call any tools, so NOTHING was saved — a summary alone files nothing. Re-read the capture and actually call the tools now for every item worth keeping (tasks, ideas, projects, clients, trades, journal entries, facts to remember). If after re-reading there is genuinely nothing to file, reply with exactly: NOTHING TO FILE.",
+      });
       continue;
     }
     return { summary: m.content ?? "", filed: actions.length, actions };
