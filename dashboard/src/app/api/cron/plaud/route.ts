@@ -105,8 +105,10 @@ export async function GET(request: Request) {
 
         let failed: string | undefined;
         while (p.i < chunks.length && Date.now() - t0 < BUDGET_MS) {
-          const label = chunks.length > 1 ? ` (part ${p.i + 1}/${chunks.length})` : "";
-          const r = await ingestTranscript(chunks[p.i], `PLAUD: ${f.name || f.id}${label}`);
+          const multi = chunks.length > 1;
+          const label = multi ? ` (part ${p.i + 1}/${chunks.length})` : "";
+          const r = await ingestTranscript(chunks[p.i], `PLAUD: ${f.name || f.id}${label}`,
+            multi ? { part: { i: p.i + 1, n: chunks.length } } : undefined);
           if (r.error) { failed = r.error; break; }
           p.filed += r.filed;
           p.summary = `${p.summary}${p.summary ? "\n" : ""}${r.summary}`.slice(-6000);

@@ -107,9 +107,20 @@ export function chunkTranscript(text: string, maxChars: number): string[] {
 // Turn a raw capture (PLAUD recording / voice memo / brain-dump) into filed
 // Kaleb OS records by running Atlas's tool-loop in INGEST MODE. Shared by
 // /api/ingest/transcript and /api/ingest/plaud.
-export async function ingestTranscript(transcript: string, source?: string): Promise<IngestResult> {
+export async function ingestTranscript(
+  transcript: string,
+  source?: string,
+  opts?: { part?: { i: number; n: number } },
+): Promise<IngestResult> {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) return { summary: "", filed: 0, actions: [], error: "OPENROUTER_API_KEY not set" };
+
+  // Hard ceiling on how much one pass may file. Told to "capture everything", a
+  // model handed 30k characters of a rambling three-hour meeting will turn every
+  // sentence into a task — one run filed 1,583 of them before this existed. A
+  // capture that genuinely warrants more than this needs a human, not a bigger cap.
+  const part = opts?.part;
+  const maxActions = part ? 15 : 40;
 
   // Route into Trade Print if Kaleb used the code word (parallel to Kaleb OS filing).
   void maybeForwardTradingSession(String(transcript), source);
@@ -129,6 +140,12 @@ export async function ingestTranscript(transcript: string, source?: string): Pro
     "- A lasting fact about Kaleb (preference, how he works, goal) → remember",
     "- An email/text he wants sent → draft_email (goes to approval, never sent)",
     "BE COMPLETE, don't be conservative: if he mentions a meditation or how he felt → ALWAYS add_journal. If he mentions ANY trade → ALWAYS log_trade (capture the process/transcript even if it was a clean trade). A content idea for a brand → log_content_idea (brand me|ai|trading), not just log_idea. Capture everything real.",
+    `HARD LIMIT: file AT MOST ${maxActions} items total from this capture. Being complete means not missing what matters — it does NOT mean turning every sentence into a task. Only file a real decision, commitment, or follow-up with an actual owner; skip discussion, musing, and restatements of the same point. If more than ${maxActions} items look fileable, file only the most important ones and say in your summary what you left out.`,
+    ...(part
+      ? [
+          `\nThis is section ${part.i} of ${part.n} of one long recording — the surrounding sections are filed separately. File only what THIS section establishes, and don't re-file a commitment just because it was mentioned again here.`,
+        ]
+      : []),
     ...(codeHints.length
       ? [
           "\nSPOKEN CODE WORDS DETECTED — Kaleb said one of his category triggers at the start of this capture. Follow these over guessing from content alone:",
@@ -157,12 +174,25 @@ export async function ingestTranscript(transcript: string, source?: string): Pro
 
     if (m.tool_calls?.length) {
       messages.push(m);
+      let capped = false;
       for (const tc of m.tool_calls) {
+        // Enforce the ceiling here, not just in the prompt — a model that ignores
+        // the instruction must not be able to flood the database anyway.
+        if (actions.length >= maxActions) { capped = true; }
         let args: Record<string, unknown> = {};
         try { args = JSON.parse(tc.function.arguments || "{}"); } catch { /* ignore */ }
-        const result = await execTool(tc.function.name, args);
-        actions.push({ tool: tc.function.name, args });
+        const result = capped
+          ? { error: `item limit of ${maxActions} reached for this capture — nothing further was filed` }
+          : await execTool(tc.function.name, args);
+        if (!capped) actions.push({ tool: tc.function.name, args });
         messages.push({ role: "tool", tool_call_id: tc.id, name: tc.function.name, content: JSON.stringify(result) });
+      }
+      if (capped) {
+        return {
+          summary: `(stopped at the ${maxActions}-item limit for one capture — review this recording by hand if more was expected)`,
+          filed: actions.length,
+          actions,
+        };
       }
       continue;
     }
