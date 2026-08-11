@@ -78,6 +78,11 @@ export async function GET(request: Request) {
     const { data: done } = await supabase.from("plaud_ingested").select("file_id").in("file_id", ids);
     const seen = new Set((done ?? []).map(r => r.file_id));
 
+    // Drop progress for anything already finished. A run killed at the function
+    // limit can leave the entry behind — it is never read again once the
+    // recording is in the ledger, but it makes the state confusing to read.
+    for (const id of Object.keys(progress)) if (seen.has(id)) delete progress[id];
+
     // Finish partly-filed recordings before starting new ones, so a long meeting
     // can't be starved by a steady trickle of short ones.
     const queue = files.filter(f => !seen.has(f.id)).sort((a, b) => (progress[b.id] ? 1 : 0) - (progress[a.id] ? 1 : 0));
