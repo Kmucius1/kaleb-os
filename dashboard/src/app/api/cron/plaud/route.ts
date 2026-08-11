@@ -6,9 +6,10 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 800;
 
-// Stop starting new work once this much of the run is gone, leaving room for the
-// in-flight chunk to land and the heartbeat to be written.
-const BUDGET_MS = 560_000;
+// Stop starting new work once this much of the run is gone. A single chunk has
+// been measured at up to ~300s, so this must leave that much headroom under
+// maxDuration or the run is killed mid-chunk and never writes its heartbeat.
+const BUDGET_MS = 420_000;
 // How much transcript to hand the model in one pass.
 const CHUNK_CHARS = 30_000;
 // Cap transcript probes per run so a large library can't eat the whole budget.
@@ -147,9 +148,12 @@ export async function GET(request: Request) {
         log.errors = (log.errors as number) + 1;
         results.push({ file_id: f.id, name: f.name, error: (e as Error).message });
       }
+      // Persist after every recording, not just at the end: if the run is killed
+      // at the function limit it never reaches the code below, and any chunk
+      // progress held only in memory would be redone from scratch next run.
+      await saveProgress();
     }
 
-    await saveProgress();
     // Heartbeat so we can confirm the cron actually fires (and see what's stuck).
     await supabase.from("kalebos_config").upsert(
       {
