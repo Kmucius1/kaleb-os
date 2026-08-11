@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { countTasksNow } from '@/lib/taskCount'
 import {
   CircleCheckBig, Target, FolderOpen, BarChart2, Clapperboard, Briefcase, Wallet,
   Users, LineChart, Settings, ChevronRight, Inbox, Brain, TrendingUp, CheckSquare,
@@ -16,7 +17,7 @@ type Item = { href: string; label: string; icon: React.ElementType; badge?: numb
 export default async function MorePage() {
   const [{ count: approvals }, { count: tasks }] = await Promise.all([
     supabase.from('agent_actions').select('*', { count: 'exact', head: true }).eq('status', 'pending_approval'),
-    supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+    countTasksNow(),
   ])
 
   const groups: { title: string; items: Item[] }[] = [

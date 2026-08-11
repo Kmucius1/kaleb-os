@@ -2,6 +2,7 @@
 // Each maps a spoken/typed intent to the right table(s). Used by /api/mcp.
 import { supabase } from "./supabase";
 import { supabaseDryp } from "./supabaseDryp";
+import { TASK_AREAS, dedupeKey } from "./tasks";
 
 // ── capture ──────────────────────────────────────────────────────────
 const IDEA_TYPES = ["content", "business", "trading", "personal"];
@@ -40,18 +41,46 @@ export async function addJournal(input: { content: string; kind?: string }) {
   return { id: data?.id, saved: "journal" };
 }
 
-export async function addTask(input: { title: string; deadline?: string; category?: string }) {
+export async function addTask(input: {
+  title: string; deadline?: string; category?: string;
+  owner?: string; priority?: number; area?: string; source?: string;
+}) {
   // due_date is a DATE column — only store a real YYYY-MM-DD. Atlas sometimes
   // passes a relative phrase ("this week"); keep that out of the column (and in
   // the title so it isn't lost) rather than erroring on the whole capture.
   const raw = input.deadline?.trim();
   const iso = raw && !isNaN(Date.parse(raw)) ? new Date(raw).toISOString().slice(0, 10) : null;
   const title = raw && !iso ? `${input.title} (${raw})` : input.title;
+
+  // Triage is set at write time, not left for later. A task with no owner and no
+  // priority is indistinguishable from every other task, which is how the list
+  // got to 306 rows of undifferentiated pending.
+  const owner = input.owner === "team" || input.owner === "other" ? input.owner : "kaleb";
+  const priority = Math.min(10, Math.max(1, Math.round(Number(input.priority) || 5)));
+  const area = (TASK_AREAS as readonly string[]).includes(input.area ?? "") ? input.area : null;
+  const key = dedupeKey(title);
+
+  // One recording gets chunked into sections filed by separate passes, and the
+  // same commitment gets restated across them. Match an open task with the same
+  // normalized title and keep the stronger priority instead of adding a row.
+  const { data: dupe } = await supabase.from("tasks")
+    .select("id,priority").eq("dedupe_key", key).eq("status", "pending").limit(1).maybeSingle();
+  if (dupe) {
+    if (priority > (dupe.priority ?? 0)) {
+      await supabase.from("tasks").update({ priority, updated_at: new Date().toISOString() }).eq("id", dupe.id);
+    }
+    return { id: dupe.id, saved: "tasks", duplicate_of: dupe.id, due_date: iso };
+  }
+
   const { data, error } = await supabase.from("tasks")
-    .insert({ title, due_date: iso, status: "pending" })
+    .insert({
+      title, due_date: iso, status: "pending",
+      owner, priority, area, source: input.source ?? null,
+      dedupe_key: key, triaged_at: new Date().toISOString(),
+    })
     .select("id").single();
   if (error) throw new Error(error.message);
-  return { id: data?.id, saved: "tasks", due_date: iso };
+  return { id: data?.id, saved: "tasks", owner, priority, due_date: iso };
 }
 
 // A personal income stream / venture (shows on the Personal "Business" tab).

@@ -132,7 +132,7 @@ export async function ingestTranscript(
     "\nINGEST MODE. Kaleb just captured the following (via " + (source || "voice/PLAUD") + "). It's raw and unstructured — a meeting, a brain-dump, or a trade recap.",
     "Your job: extract EVERY actionable/loggable item and FILE each one using your tools. Be thorough but don't invent things that aren't there.",
     "- New idea/thought → log_idea (content idea for a brand → log_content_idea)",
-    "- To-do / reminder / follow-up → add_task",
+    "- To-do / reminder / follow-up KALEB owns → add_task",
     "- Project update (e.g. building something) → log_project",
     "- Client mention/update/note → update_client",
     "- Trade recap (entry/exit/process) → log_trade",
@@ -141,6 +141,13 @@ export async function ingestTranscript(
     "- An email/text he wants sent → draft_email (goes to approval, never sent)",
     "BE COMPLETE, don't be conservative: if he mentions a meditation or how he felt → ALWAYS add_journal. If he mentions ANY trade → ALWAYS log_trade (capture the process/transcript even if it was a clean trade). A content idea for a brand → log_content_idea (brand me|ai|trading), not just log_idea. Capture everything real.",
     `HARD LIMIT: file AT MOST ${maxActions} items total from this capture. Being complete means not missing what matters — it does NOT mean turning every sentence into a task. Only file a real decision, commitment, or follow-up with an actual owner; skip discussion, musing, and restatements of the same point. If more than ${maxActions} items look fileable, file only the most important ones and say in your summary what you left out.`,
+    `\nTASK TRIAGE — a meeting transcript is full of other people's action items. Every add_task MUST carry owner and priority, and you must think about owner BEFORE you file:`,
+    `- owner="kaleb" only if HE committed to it or it is his business/build/outreach and nobody else will do it.`,
+    `- owner="team" if he owns the outcome but Zoe/Mick/AntVee/a contractor does the doing.`,
+    `- owner="other" for anything another party owns — the banker's internal steps, a client's CFO gathering their own paperwork, another company's process, room logistics someone else was running. File these as "other" or don't file them at all; never as Kaleb's.`,
+    `- priority 1-10: 9-10 money at risk / dated client deliverable / blocking others. 7-8 revenue or an active blocker. 4-6 normal work. 1-3 trivia, vague restatements, someday. If the task doesn't name a real action ("discuss with Mick about sitting on the idea"), it is 1-3 — or skip it.`,
+    `Don't spread one commitment across three tasks, and don't re-file something an earlier section already covered. A capture that yields 5 well-scored tasks beats one that yields 40 flat ones.`,
+    `- area: dryp | ehm | linkdup | kaleb-os | trading | commerce | clients | personal | admin | other.`,
     ...(part
       ? [
           `\nThis is section ${part.i} of ${part.n} of one long recording — the surrounding sections are filed separately. File only what THIS section establishes, and don't re-file a commitment just because it was mentioned again here.`,
@@ -181,6 +188,9 @@ export async function ingestTranscript(
         if (actions.length >= maxActions) { capped = true; }
         let args: Record<string, unknown> = {};
         try { args = JSON.parse(tc.function.arguments || "{}"); } catch { /* ignore */ }
+        // Stamp provenance from the caller, not the model — "where did this come
+        // from" is the first thing you want when a task looks like nonsense.
+        if (tc.function.name === "add_task" && source) args.source = source;
         const result = capped
           ? { error: `item limit of ${maxActions} reached for this capture — nothing further was filed` }
           : await execTool(tc.function.name, args);

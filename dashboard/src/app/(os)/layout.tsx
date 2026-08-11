@@ -4,11 +4,12 @@ import SpaceBar from '@/components/SpaceBar'
 import RegisterSW from '@/components/RegisterSW'
 import { supabase } from '@/lib/supabase'
 import { getSpace } from '@/lib/space'
+import { countTasksNow } from '@/lib/taskCount'
 
 export default async function OSLayout({ children }: { children: React.ReactNode }) {
   const [{ count: approvalCount }, { count: taskCount }, space] = await Promise.all([
     supabase.from('agent_actions').select('*', { count: 'exact', head: true }).eq('status', 'pending_approval'),
-    supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+    countTasksNow(),
     getSpace(),
   ])
 

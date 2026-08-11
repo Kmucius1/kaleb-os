@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { countTasksNow } from '@/lib/taskCount'
 import { getSpace, SPACE_META } from '@/lib/space'
 import { User, Building2 } from 'lucide-react'
 import {
@@ -17,7 +18,7 @@ type Group = { title: string; apps: App[] }
 export default async function AppsPage() {
   const [{ count: approvalCount }, { count: taskCount }, space] = await Promise.all([
     supabase.from('agent_actions').select('*', { count: 'exact', head: true }).eq('status', 'pending_approval'),
-    supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+    countTasksNow(),
     getSpace(),
   ])
   const ac = approvalCount ?? 0

@@ -24,8 +24,11 @@ export default async function HomePage() {
   const alignment = scoreDay(day.blocks, day.nowMin)
 
   const [{ data: tasks }, { data: cfg }] = await Promise.all([
+    // His own, highest-scored first. Without the owner filter this was showing
+    // whichever three of 306 equally-weighted rows came back first.
     supabase.from('tasks').select('title').in('status', ['pending', 'in_progress'])
-      .order('priority', { ascending: false }).limit(3),
+      .eq('owner', 'kaleb')
+      .order('priority', { ascending: false }).order('due_date', { ascending: true, nullsFirst: false }).limit(3),
     supabase.from('kalebos_config').select('key,value').in('key', ['north_star']),
   ])
   const focus = (cfg ?? []).find(c => c.key === 'north_star')?.value
