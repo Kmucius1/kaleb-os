@@ -7,12 +7,25 @@ export const revalidate = 60
 export default async function TasksPage() {
   // Only what's open. Completed and dismissed tasks are history, and history
   // does not belong in a list whose job is "what do I do next".
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('tasks')
     .select('id,title,description,status,priority,owner,area,source,due_date,triaged_at,created_at')
     .in('status', ['pending', 'in_progress'])
     .order('priority', { ascending: false })
     .order('created_at', { ascending: false })
+
+  // Deploy and migration land independently. Between them the triage columns
+  // don't exist yet (PostgREST 42703) — fall back to the columns that always
+  // have, so the page shows an untriaged list instead of an error.
+  if (error?.code === '42703') {
+    const legacy = await supabase
+      .from('tasks')
+      .select('id,title,description,status,priority,due_date,created_at')
+      .in('status', ['pending', 'in_progress'])
+      .order('created_at', { ascending: false })
+    data = (legacy.data ?? []).map(t => ({ ...t, owner: null, area: null, source: null, triaged_at: null }))
+    error = legacy.error
+  }
 
   const open: Task[] = data ?? []
   const now = open.filter(t => bucketOf(t) === 'now').length
