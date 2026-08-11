@@ -77,6 +77,33 @@ async function maybeForwardTradingSession(transcript: string, source?: string): 
   }
 }
 
+// A multi-hour PLAUD meeting can run to several hundred thousand characters —
+// far more than one ingest pass can chew through inside a function's time limit.
+// Split it into pieces small enough to file one at a time. The split is
+// deterministic (fixed budget, snapped to the nearest line break) so a caller
+// can stop partway through and resume at the same chunk index on a later run.
+export function chunkTranscript(text: string, maxChars: number): string[] {
+  const t = text.trim();
+  if (t.length <= maxChars) return [t];
+  const chunks: string[] = [];
+  let i = 0;
+  while (i < t.length) {
+    let end = Math.min(i + maxChars, t.length);
+    if (end < t.length) {
+      // Prefer a line break, then a sentence end, but never backtrack so far
+      // that we make barely any progress.
+      const floor = i + Math.floor(maxChars * 0.6);
+      const nl = t.lastIndexOf("\n", end);
+      const dot = t.lastIndexOf(". ", end);
+      const cut = Math.max(nl, dot);
+      if (cut > floor) end = cut + 1;
+    }
+    chunks.push(t.slice(i, end).trim());
+    i = end;
+  }
+  return chunks.filter(Boolean);
+}
+
 // Turn a raw capture (PLAUD recording / voice memo / brain-dump) into filed
 // Kaleb OS records by running Atlas's tool-loop in INGEST MODE. Shared by
 // /api/ingest/transcript and /api/ingest/plaud.

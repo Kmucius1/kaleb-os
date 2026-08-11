@@ -61,32 +61,38 @@ export async function plaudListFiles(token: string, pageSize = 30, page = 1): Pr
   return (data?.data ?? []) as PlaudFile[];
 }
 
-// Returns the recording's full transcript text (+ AI summary when present), the
-// same content the MCP's get_transcript surfaces — pulled from source_list/note_list.
+function blockText(file: { source_list?: { data_type?: string; data_content?: string }[] }, type: string): string {
+  const raw = (file.source_list ?? []).find(s => s.data_type === type)?.data_content;
+  if (!raw) return "";
+  try {
+    const segs = JSON.parse(raw);
+    if (Array.isArray(segs)) {
+      return segs.map((x: { content?: string }) => x?.content ?? "").filter(Boolean).join(" ").trim();
+    }
+  } catch { /* not JSON — use as-is */ }
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
+// Returns the recording's transcript text (+ AI summary when present), the same
+// content the MCP's get_transcript surfaces.
+//
+// PLAUD ships the same words several times over in source_list: `transaction`
+// (raw), `transaction_polish` (AI-cleaned), and `outline`. Concatenating the
+// whole list fed every word to the model twice and doubled the size of an
+// already-huge multi-hour meeting — pick ONE transcript block, preferring the
+// cleaned one when PLAUD has produced it.
 export async function plaudTranscript(token: string, fileId: string): Promise<string> {
   const res = await plaudGet(token, `/files/${fileId}`);
   if (!res.ok) throw new Error(`PLAUD getFile failed: ${res.status}`);
   const file = await res.json();
 
-  const parts: string[] = [];
-  for (const s of (file.source_list ?? []) as { data_content?: string }[]) {
-    const raw = s.data_content;
-    if (!raw) continue;
-    try {
-      const segs = JSON.parse(raw);
-      if (Array.isArray(segs)) {
-        const text = segs.map((x: { content?: string }) => x?.content ?? "").filter(Boolean).join(" ").trim();
-        if (text) parts.push(text);
-        continue;
-      }
-    } catch { /* not JSON — use as-is */ }
-    if (typeof raw === "string" && raw.trim()) parts.push(raw.trim());
-  }
-  // Fall back to / supplement with the AI summary note.
+  const body = blockText(file, "transaction_polish") || blockText(file, "transaction");
+  const outline = blockText(file, "outline");
   const summary = ((file.note_list ?? []) as { data_title?: string; data_content?: string }[])
     .find(n => /summary/i.test(n.data_title ?? ""))?.data_content;
 
-  let out = parts.join("\n").trim();
+  let out = body.trim();
+  if (!out && outline) out = outline.trim();
   if (summary?.trim()) out += `\n\n[PLAUD summary]\n${summary.trim()}`;
   return out.trim();
 }

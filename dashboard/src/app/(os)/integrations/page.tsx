@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 
 export const revalidate = 60
 
-type Heartbeat = { at?: string; listed?: number; filed?: number; pending?: number; errors?: number; error?: string; waiting_on_plaud?: string[] }
+type Heartbeat = { at?: string; listed?: number; filed?: number; pending?: number; in_progress?: number; errors?: number; error?: string; waiting_on_plaud?: string[] }
 
 // The PLAUD row reports the real state of the sync instead of a hardcoded
 // "active". A recording PLAUD hasn't transcribed can sit unfiled indefinitely —
@@ -18,6 +18,11 @@ function plaudRow(hb: Heartbeat | null) {
   if (hb.error) return { ...base, status: 'error', detail: `Sync failing (${ago}): ${hb.error}`, color: 'var(--red)' }
   // Cron is every 30 min — anything past ~90 means it stopped firing.
   if (mins > 90) return { ...base, status: 'stalled', detail: `Last sync ${ago} — cron may have stopped firing`, color: 'var(--red)' }
+
+  const busy = hb.in_progress ?? 0
+  if (busy > 0) {
+    return { ...base, status: 'filing', detail: `Working through ${busy} long recording${busy > 1 ? 's' : ''} · last sync ${ago}`, color: 'var(--blue)' }
+  }
 
   const waiting = hb.pending ?? 0
   if (waiting > 0) {
