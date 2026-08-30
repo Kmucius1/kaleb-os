@@ -10,8 +10,8 @@ describe("weekly review inputs", () => {
   it("counts a gradable block for every pillar it serves, including the second", () => {
     const weekday = templateFor("weekday").filter((b) => b.kind !== "sleep");
     const dryp = weekday.find((b) => b.key === "dryp")!;
-    expect(dryp.pillar).toBe("Money");
-    expect(dryp.pillar2).toBe("Mission");
+    expect(dryp.pillar).toBe("DRYP");
+    expect(dryp.pillar2).toBe("Brand");
 
     // A naive count would credit DRYP once; the review credits both pillars.
     const naive = weekday.length;
@@ -47,12 +47,16 @@ describe("weekly review inputs", () => {
   it("keeps the Horizon floor at five of seven", () => {
     expect(HORIZON.weeklyMinimum).toBe(5);
     expect(HORIZON.weeklyIdeal).toBe(7);
-    expect(PILLARS).toContain("Spirit");
+    expect(PILLARS).toContain("Mind");
   });
 
   it("falls back rather than throwing on an unknown pillar", () => {
-    expect(toPillar("Nature")).toBe("Spirit");
-    expect(toPillar(undefined)).toBe("Spirit");
+    expect(toPillar("Nature")).toBe("Mind");
+    expect(toPillar(undefined)).toBe("Mind");
+    // Legacy names keep resolving so old rows never fall back to a wrong pillar.
+    expect(toPillar("Money")).toBe("DRYP");
+    expect(toPillar("Spirit")).toBe("Mind");
+    expect(toPillar("Mission")).toBe("Brand");
     expect(toPillar("Body")).toBe("Body");
   });
 });

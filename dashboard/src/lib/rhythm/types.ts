@@ -63,6 +63,12 @@ export type TemplateBlock = {
   notify?: boolean;
   /** Anchored to the sun rather than the clock (the Horizon Walk). */
   sunAnchored?: "sunrise" | "sunset" | "either";
+  /**
+   * This block lives *inside* another one rather than competing with it — the
+   * gym is carved out of the office day, not scheduled against it. Overlap with
+   * the named block is intentional and is never reported as a conflict.
+   */
+  containedIn?: string;
 };
 
 export type DayType = "weekday" | "saturday" | "sunday";

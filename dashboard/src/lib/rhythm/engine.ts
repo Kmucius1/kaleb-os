@@ -17,6 +17,7 @@
 import { SLEEP, templateFor, dayTypeOf } from "./template";
 import { planHorizonWalk, type SunTimes, type HorizonChoice } from "./sun";
 import type { Conflict, DayType, PlannedBlock, RebalanceProposal, TemplateBlock } from "./types";
+import { toPillar } from "./pillars";
 
 export const durationOf = (b: { start: number; end: number }) => b.end - b.start;
 const pref = (b: TemplateBlock) => b.prefMinutes ?? durationOf(b);
@@ -31,12 +32,32 @@ export function dowOfDateStr(dateStr: string): number {
 export const overlaps = (a: { start: number; end: number }, b: { start: number; end: number }) =>
   a.start < b.end && b.start < a.end;
 
-export function findConflicts(blocks: { key: string; start: number; end: number }[]): Conflict[] {
+/**
+ * A block carved out of another (gym inside the office day) overlaps it on
+ * purpose — reporting that would fire a false alarm every weekday.
+ *
+ * The exemption holds only while the inner block is genuinely *inside* its
+ * container. Dragged so it spills past either edge, it is overlapping the
+ * office day rather than sitting within it, and that is a real conflict Kaleb
+ * needs to see.
+ */
+type Span = { key: string; start: number; end: number; containedIn?: string };
+const within = (inner: Span, outer: Span) =>
+  inner.containedIn === outer.key && inner.start >= outer.start && inner.end <= outer.end;
+const contained = (a: Span, b: Span) => within(a, b) || within(b, a);
+
+export function findConflicts(
+  blocks: { key: string; start: number; end: number; containedIn?: string }[],
+): Conflict[] {
   const sorted = [...blocks].sort(byStart);
   const out: Conflict[] = [];
   for (let i = 0; i < sorted.length; i++) {
     for (let j = i + 1; j < sorted.length; j++) {
       if (sorted[j].start >= sorted[i].end) break;
+      if (contained(sorted[i], sorted[j])) continue;
+      // Deferred blocks are parked as zero-length markers. Touching one is not
+      // an overlap, and reporting it would raise a daily phantom conflict.
+      if (!overlaps(sorted[i], sorted[j])) continue;
       out.push({
         a: sorted[i].key,
         b: sorted[j].key,
@@ -73,8 +94,11 @@ export function materializeDay(input: MaterializeInput): {
   blocks: PlannedBlock[];
   conflicts: Conflict[];
 } {
-  const dayType = dayTypeOf(dowOfDateStr(input.dateStr));
-  const tpl = templateFor(dayType);
+  const dow = dowOfDateStr(input.dateStr);
+  const dayType = dayTypeOf(dow);
+  // Pass the weekday so rest-day policy applies: Wednesday and Sunday generate
+  // no gym block at all, rather than one that can only ever be missed.
+  const tpl = templateFor(dayType, dow);
   const completed = new Set(input.completed ?? []);
   const lockedKeys = new Set(input.locked ?? []);
 
@@ -109,18 +133,33 @@ export function materializeDay(input: MaterializeInput): {
     commuteHome?.end ?? 0,
     horizonPlan && horizonPlan.window === "sunset" ? horizonPlan.end + (horizonTpl?.travelMinutes ?? 0) : 0
   );
-  const { laid, deferred } = fitEvening(rest, cursor, SLEEP.targetSleepMin);
+  // Evening work must be finished by the shutdown, not by lights-out.
+  const shutdownAt = tpl.find((b) => b.key === "meditation-pm")?.start ?? SLEEP.targetSleepMin;
+  const { laid, deferred } = fitEvening(rest, cursor, shutdownAt);
   placed.push(...laid);
   // Deferred blocks stay visible (never deleted) so Kaleb can pull one back in
   // deliberately — or carry it to tomorrow.
   const deferredReasons = new Map(deferred.map((d) => [d.block.key, d.reason]));
-  placed.push(...deferred.map((d) => ({ ...d.block, start: SLEEP.targetSleepMin, end: SLEEP.targetSleepMin })));
+  placed.push(...deferred.map((d) => ({ ...d.block, start: shutdownAt, end: shutdownAt })));
 
   // 3) Sleep last, and it never gives ground to evening work.
   const sleepTpl = tpl.find((b) => b.key === "sleep");
   if (sleepTpl) {
+    // Saturday goes to bed later than a weekday, so the floor is this day's own
+    // sleep block — not the global weekday target, which used to drag Saturday
+    // 30 minutes earlier and overlap its own shutdown routine.
+    const target = Math.max(sleepTpl.start, SLEEP.targetSleepMin);
+    const latest = Math.max(target, SLEEP.latestSleepMin);
     const lastEnd = laid.length ? Math.max(...laid.map((b) => b.end)) : cursor;
-    placed.push({ ...sleepTpl, start: Math.max(SLEEP.targetSleepMin, Math.min(lastEnd, SLEEP.latestSleepMin)), end: 24 * 60 });
+    const shutdownEnd = Math.max(
+      ...tpl.filter((b) => b.key === "meditation-pm" || b.key === "journal-pm").map((b) => b.end),
+      0,
+    );
+    placed.push({
+      ...sleepTpl,
+      start: Math.max(target, shutdownEnd, Math.min(lastEnd, latest)),
+      end: 24 * 60,
+    });
   }
 
   // 4) Dated events become protected blocks — real commitments outrank rhythm.
@@ -129,7 +168,7 @@ export function materializeDay(input: MaterializeInput): {
     .map((e) => ({
       key: `event:${e.id}`,
       title: e.title,
-      pillar: (e.pillar as TemplateBlock["pillar"]) ?? "Mission",
+      pillar: toPillar(e.pillar),
       kind: "event" as const,
       start: e.start_min!,
       end: e.end_min ?? e.start_min! + 60,
@@ -162,7 +201,11 @@ export function materializeDay(input: MaterializeInput): {
   return { dateStr: input.dateStr, dayType, blocks, conflicts: findConflicts(blocks) };
 }
 
-const EVENING_KEYS = new Set(["horizon", "dinner", "freedom", "content", "meditation-pm", "journal-pm", "sleep", "relationships", "plan-week"]);
+// The shutdown routine (evening meditation + journal) is deliberately NOT in
+// here: it is clock-anchored at 9:30 PM and forms the wall the evening's work
+// must finish before. Letting it flow with the rest made it drift earlier
+// whenever a block shortened, which is the opposite of a shutdown *routine*.
+const EVENING_KEYS = new Set(["horizon", "dinner", "freedom", "content", "sleep", "relationships", "plan-week", "saturday-open", "sunday-rest"]);
 const isEvening = (key: string) => EVENING_KEYS.has(key);
 
 /**

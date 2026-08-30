@@ -33,13 +33,19 @@
   --accent-dim: rgba(139, 92, 246, 0.14);
   --accent-grad: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
 
-  /* Six-pillar palette (canonical — tags, bars, gradient icons) */
-  --spirit: #a78bfa;
-  --mind: #60a5fa;
+  /* Six-pillar palette (canonical — tags, bars, gradient icons).
+     Season 1: Money→DRYP, Spirit+Mind→Mind (violet), Mission→Brand,
+     Trading split out and given the freed blue. */
+  --dryp: #fbbf24;
+  --mind: #a78bfa;
   --body: #34d399;
-  --money: #fbbf24;
-  --mission: #fb923c;
+  --trading: #60a5fa;
+  --brand: #fb923c;
   --relationships: #f472b6;
+  /* Legacy aliases — old class names keep resolving until every view moves. */
+  --spirit: var(--mind);
+  --money: var(--dryp);
+  --mission: var(--brand);
 
   --green: #34d399;  --green-dim: rgba(52, 211, 153, 0.12);
   --red: #f87171;    --red-dim: rgba(248, 113, 113, 0.12);
@@ -84,8 +90,9 @@
    ============================================================ */
 :root {
   --ease: cubic-bezier(0.22, 0.8, 0.28, 1);
-  --pillar-spirit: #a78bfa; --pillar-mind: #60a5fa; --pillar-body: #34d399;
-  --pillar-money: #fbbf24; --pillar-mission: #fb923c; --pillar-rel: #f472b6;
+  --pillar-dryp: var(--dryp); --pillar-mind: var(--mind); --pillar-body: var(--body);
+  --pillar-trading: var(--trading); --pillar-brand: var(--brand); --pillar-rel: var(--relationships);
+  --pillar-spirit: var(--mind); --pillar-money: var(--dryp); --pillar-mission: var(--brand);
 }
 
 /* Cards gain depth: a whisper of top-light gradient + softer hairline + motion. */

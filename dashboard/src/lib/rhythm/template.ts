@@ -10,16 +10,46 @@ import type { DayType, TemplateBlock } from "./types";
 
 export const H = (h: number, m = 0) => h * 60 + m;
 
-/** Sleep target: 8h+ protected. Wake 6:00 AM, lights out ~9:45–10:00 PM. */
+/** Sleep target: exactly eight hours. Lights out 10:00 PM, wake 6:00 AM. */
 export const SLEEP = {
   wakeMin: H(6, 0),
-  targetSleepMin: H(21, 45),
-  latestSleepMin: H(22, 0),
+  targetSleepMin: H(22, 0),
+  latestSleepMin: H(22, 30),
   minHours: 8,
 };
 
-/** Commute is configurable 30–40 min; we plan with 40 so lateness is impossible. */
-export const COMMUTE = { minMinutes: 30, maxMinutes: 40, planWith: 40 };
+/** Commute is configurable 30–45 min; we plan with 45 so lateness is impossible.
+ *  Target departure is 9:15 AM, arriving for a 10:00 office start. */
+export const COMMUTE = { minMinutes: 30, maxMinutes: 45, planWith: 45 };
+
+/**
+ * Gym policy, by real weekday (0 = Sunday).
+ *
+ * Wednesday and Sunday are rest *by design*. They are removed from the day
+ * entirely rather than left to be missed, so a rest day cannot cost him a
+ * point of consistency — the denominator shrinks with the day.
+ */
+export const GYM = {
+  /** Non-negotiable training days. */
+  mandatory: [1, 2, 4, 5] as number[], // Mon, Tue, Thu, Fri
+  /** Optional — offered, never graded. */
+  optional: [6] as number[], // Saturday
+  /** Rest. No gym block is generated at all. */
+  rest: [0, 3] as number[], // Sunday, Wednesday
+  /** The window the block floats inside on an office day. */
+  windowStart: H(11, 30),
+  windowEnd: H(15, 0),
+  minMinutes: 60,
+  prefMinutes: 75,
+};
+
+export type GymStatus = "mandatory" | "optional" | "rest";
+
+export function gymStatusFor(dow: number): GymStatus {
+  if (GYM.rest.includes(dow)) return "rest";
+  if (GYM.optional.includes(dow)) return "optional";
+  return "mandatory";
+}
 
 /** Horizon Walk: 30–60 min at the beach, every day, minimum 5 of 7. */
 export const HORIZON = {
@@ -49,10 +79,10 @@ const WEEKDAY: TemplateBlock[] = [
   {
     key: "meditation-am",
     title: "Morning Meditation",
-    pillar: "Spirit",
+    pillar: "Mind",
     kind: "ritual",
     start: H(6, 10),
-    end: H(6, 30),
+    end: H(6, 35),
     flexibility: "flexible",
     priority: 2,
     minMinutes: 10,
@@ -62,23 +92,23 @@ const WEEKDAY: TemplateBlock[] = [
   },
   {
     key: "journal-am",
-    title: "Morning Journal",
-    pillar: "Spirit",
+    title: "Journal · Walk · Water",
+    pillar: "Mind",
     kind: "journal",
-    start: H(6, 30),
-    end: H(6, 50),
+    start: H(6, 35),
+    end: H(7, 0),
     flexibility: "flexible",
     priority: 2,
     minMinutes: 10,
     energy: "medium",
     detail:
-      "Who am I choosing to be today? The three most important outcomes? What would make today feel aligned? What thought or emotion needs attention?",
-    cue: "Morning journal — who are you choosing to be today?",
+      "Optional journaling, outdoor time, water. Who am I choosing to be today? The three most important outcomes? Slow, intentional preparation — the day does not start in a rush.",
+    cue: "Morning reset — journal, walk, water",
   },
   {
     key: "trading",
     title: "Trading Session",
-    pillar: "Money",
+    pillar: "Trading",
     identity: "Trader",
     kind: "work",
     start: H(7, 0),
@@ -91,41 +121,26 @@ const WEEKDAY: TemplateBlock[] = [
     cue: "Markets — trading session starts now",
   },
   {
-    key: "gym",
-    title: "Gym",
+    key: "get-ready",
+    title: "Get Ready",
     pillar: "Body",
-    kind: "training",
+    kind: "ritual",
     start: H(9, 0),
-    end: H(10, 0),
+    end: H(9, 15),
     flexibility: "flexible",
     priority: 2,
-    minMinutes: 40,
-    energy: "high",
-    location: "Gym",
-    detail: "Progressive overload. Track exercises, sets, reps, weight. Protein and hydration after.",
-    cue: "Gym time — progressive overload",
-  },
-  {
-    key: "breakfast",
-    title: "Breakfast & Recovery",
-    pillar: "Body",
-    kind: "meal",
-    start: H(10, 0),
-    end: H(10, 25),
-    flexibility: "flexible",
-    priority: 3,
-    minMinutes: 15,
+    minMinutes: 10,
     energy: "low",
-    detail: "High-protein meal. Hydrate. Quick reset before the drive.",
-    notify: false,
+    detail: "Shower, dress, protein, out the door. Target departure 9:15.",
+    cue: "Get ready — wheels up at 9:15",
   },
   {
     key: "commute-in",
     title: "Commute to Office",
     pillar: "Mind",
     kind: "travel",
-    start: H(10, 25),
-    end: H(11, 5),
+    start: H(9, 15),
+    end: H(10, 0),
     flexibility: "protected",
     priority: 1,
     minMinutes: COMMUTE.minMinutes,
@@ -138,28 +153,47 @@ const WEEKDAY: TemplateBlock[] = [
   {
     key: "dryp",
     title: "DRYP Builder Block",
-    pillar: "Money",
-    pillar2: "Mission",
+    pillar: "DRYP",
+    pillar2: "Brand",
     identity: "Builder",
     kind: "work",
-    start: H(11, 5),
-    end: H(17, 30),
+    start: H(10, 0),
+    end: H(18, 0),
     flexibility: "protected",
     priority: 1,
     energy: "high",
     location: "Office",
     detail:
-      "Top three outcomes first. Meetings, deep-work windows, admin windows, follow-ups — tasks ranked by importance and deadline.",
+      "CEO, Builder, Management, Admin. Top three outcomes first — high-leverage work before anything that could eventually be delegated.",
     cue: "Builder block — your top three outcomes",
+  },
+  {
+    // Floats inside the office day. The engine places it wherever meetings
+    // permit between 11:30 and 3:00; on rest days it is never generated.
+    key: "gym",
+    title: "Gym",
+    pillar: "Body",
+    kind: "training",
+    start: GYM.windowStart,
+    end: GYM.windowStart + GYM.prefMinutes,
+    flexibility: "flexible",
+    priority: 2,
+    minMinutes: GYM.minMinutes,
+    prefMinutes: GYM.prefMinutes,
+    energy: "high",
+    location: "Gym",
+    containedIn: "dryp",
+    detail:
+      "Progressive overload. Track exercises, sets, reps, weight. Protein and hydration after. Anywhere between 11:30 and 3:00 that meetings allow.",
+    cue: "Gym time — progressive overload",
   },
   {
     key: "commute-home",
     title: "Commute Home",
-    pillar: "Spirit",
-    pillar2: "Mind",
+    pillar: "Mind",
     kind: "travel",
-    start: H(17, 30),
-    end: H(18, 10),
+    start: H(18, 0),
+    end: H(19, 0),
     flexibility: "protected",
     priority: 2,
     minMinutes: COMMUTE.minMinutes,
@@ -174,7 +208,7 @@ const WEEKDAY: TemplateBlock[] = [
   {
     key: "horizon",
     title: "Horizon Walk",
-    pillar: "Spirit",
+    pillar: "Mind",
     pillar2: "Body",
     kind: "horizon",
     start: H(19, 30), // placeholder — always recomputed from real sun times
@@ -195,8 +229,8 @@ const WEEKDAY: TemplateBlock[] = [
     title: "Dinner",
     pillar: "Body",
     kind: "meal",
-    start: H(20, 15),
-    end: H(20, 45),
+    start: H(19, 15),
+    end: H(19, 45),
     flexibility: "flexible",
     // Eating is not optional work. On a short evening this outranks the
     // Freedom Block and Content Studio.
@@ -210,14 +244,14 @@ const WEEKDAY: TemplateBlock[] = [
   {
     key: "freedom",
     title: "Freedom Block",
-    pillar: "Mission",
+    pillar: "Brand",
     kind: "work",
-    start: H(20, 45),
-    end: H(21, 45),
+    start: H(19, 45),
+    end: H(21, 0),
     flexibility: "flexible",
     priority: 3,
-    minMinutes: 45,
-    prefMinutes: 60,
+    minMinutes: 30,
+    prefMinutes: 75,
     energy: "medium",
     rotates: "freedom",
     detail:
@@ -226,45 +260,47 @@ const WEEKDAY: TemplateBlock[] = [
   },
   {
     key: "content",
-    title: "Content Studio",
-    pillar: "Mission",
+    title: "Post & Engage",
+    pillar: "Brand",
     kind: "work",
-    start: H(21, 45),
-    end: H(22, 45),
+    start: H(21, 0),
+    end: H(21, 30),
     flexibility: "flexible",
-    // Last in, first deferred — content batches well, so a missed evening is
-    // recoverable in a way sleep and food are not.
+    // Recording moved to Saturday's batch, so the weekday job is small: the two
+    // posts are already scheduled — this is publishing, replying and capturing
+    // tomorrow's ideas. Last in, first deferred: a missed evening is recoverable
+    // in a way sleep and food are not.
     priority: 4,
-    minMinutes: 45,
-    prefMinutes: 60,
+    minMinutes: 15,
+    prefMinutes: 30,
     energy: "medium",
     rotates: "content",
     detail:
-      "Script, record, edit, post, respond, review analytics, organize footage. Turn today's journal insights into content.",
-    cue: "Content Studio — ship something",
+      "The two posts are already scheduled. Reply to comments, check yesterday's numbers, capture anything today gave you worth saying.",
+    cue: "Post & engage — distribution compounds",
   },
   {
     key: "meditation-pm",
-    title: "Evening Meditation",
-    pillar: "Spirit",
+    title: "Shutdown + Evening Meditation",
+    pillar: "Mind",
     kind: "ritual",
-    start: H(22, 45),
-    end: H(23, 0),
-    flexibility: "flexible",
-    priority: 2,
+    start: H(21, 30),
+    end: H(21, 50),
+    flexibility: "protected",
+    priority: 1,
     minMinutes: 10,
     prefMinutes: 20,
     energy: "low",
-    detail: "Release the day. Become still.",
-    cue: "Evening meditation — release the day",
+    detail: "Close the laptop. Close the day. Release it. Become still.",
+    cue: "Shutdown — release the day",
   },
   {
     key: "journal-pm",
     title: "Evening Journal",
-    pillar: "Spirit",
+    pillar: "Mind",
     kind: "journal",
-    start: H(23, 0),
-    end: H(23, 15),
+    start: H(21, 50),
+    end: H(22, 0),
     flexibility: "flexible",
     priority: 2,
     minMinutes: 10,
@@ -288,7 +324,7 @@ const WEEKDAY: TemplateBlock[] = [
     // enforced by the engine against SLEEP.minHours / latestSleepMin instead.
     energy: "low",
     detail: "Eight hours, protected. Tomorrow is built here.",
-    cue: "Wind down — sleep target is 9:45",
+    cue: "Lights out — eight hours to a 6:00 wake",
   },
 ];
 
@@ -301,111 +337,140 @@ const wd = (key: string): TemplateBlock => {
 
 const SATURDAY: TemplateBlock[] = [
   { ...wd("wake"), start: H(7, 0), end: H(7, 15), detail: "Within an hour of the weekday wake. Water. Hygiene. Open KalebOS." },
-  { ...wd("meditation-am"), start: H(7, 15), end: H(7, 40) },
-  { ...wd("journal-am"), start: H(7, 40), end: H(8, 0) },
+  { ...wd("meditation-am"), start: H(7, 15), end: H(7, 45) },
+  { ...wd("journal-am"), start: H(7, 45), end: H(8, 15) },
   {
-    key: "trading-review",
-    title: "Trading Review & Backtest",
-    pillar: "Money",
-    identity: "Trader",
-    kind: "work",
-    start: H(8, 0),
-    end: H(10, 0),
+    key: "breakfast",
+    title: "Breakfast",
+    pillar: "Body",
+    kind: "meal",
+    start: H(8, 15),
+    end: H(8, 45),
     flexibility: "flexible",
-    priority: 2,
-    minMinutes: 60,
-    energy: "high",
-    detail: "Review the week's trades, backtest, refine rules. Trade live only if the session qualifies.",
-    cue: "Trading review — grade your week",
+    priority: 3,
+    minMinutes: 15,
+    energy: "low",
+    detail: "High-protein meal. Hydrate.",
+    notify: false,
   },
-  { ...wd("gym"), start: H(10, 0), end: H(11, 15), minMinutes: 45 },
-  { ...wd("breakfast"), start: H(11, 15), end: H(11, 45) },
   {
-    key: "creative",
-    title: "Long-Form Content & Filming",
-    pillar: "Mission",
+    // The week's distribution is won or lost here. Twenty-eight ideas in,
+    // fourteen scheduled videos out.
+    key: "content-batch",
+    title: "Content Batch",
+    pillar: "Brand",
     kind: "work",
-    start: H(12, 30),
-    end: H(16, 0),
+    start: H(9, 0),
+    end: H(12, 30),
     flexibility: "flexible",
-    priority: 2,
-    minMinutes: 90,
+    priority: 1,
+    minMinutes: 120,
+    prefMinutes: 210,
     energy: "high",
-    detail: "Long-form YouTube, filming, batching, personal projects.",
-    cue: "Creative block — film and build",
+    detail:
+      "Generate 28 ideas, select 14, record 14, edit lightly, schedule two a day across the week. Talking head is the default — do not overcomplicate the format.",
+    cue: "Content batch — 28 ideas, pick 14, record",
   },
-  wd("horizon"),
   {
-    key: "relationships",
-    title: "People & Florida",
+    key: "gym",
+    title: "Gym (optional)",
+    pillar: "Body",
+    kind: "training",
+    start: H(13, 0),
+    end: H(14, 15),
+    flexibility: "movable",
+    priority: 4,
+    minMinutes: 45,
+    energy: "high",
+    location: "Gym",
+    detail: "Optional. Train if the body wants it — this one is offered, never graded.",
+    cue: "Gym if you want it — optional today",
+  },
+  {
+    key: "saturday-open",
+    title: "Open",
     pillar: "Relationships",
     kind: "work",
-    start: H(18, 30),
-    end: H(21, 30),
+    start: H(14, 30),
+    end: H(19, 0),
     flexibility: "movable",
-    priority: 3,
+    priority: 4,
     minMinutes: 60,
     energy: "medium",
-    detail: "Friends, family, networking, dates, Florida experiences. Flexible evening recreation.",
-    cue: "Go be with people",
+    detail: "Yours. Friends, family, Florida, filming, exploring, rest — whatever the week left undone.",
+    cue: "The rest of Saturday is yours",
   },
-  { ...wd("meditation-pm"), start: H(22, 0), end: H(22, 15) },
-  { ...wd("journal-pm"), start: H(22, 15), end: H(22, 30) },
+  wd("horizon"),
+  { ...wd("meditation-pm"), start: H(22, 0), end: H(22, 20), flexibility: "flexible", priority: 2 },
+  { ...wd("journal-pm"), start: H(22, 20), end: H(22, 30) },
   { ...wd("sleep"), start: H(22, 30), end: H(24, 0) },
 ];
 
 const SUNDAY: TemplateBlock[] = [
   { ...wd("wake"), start: H(7, 0), end: H(7, 15) },
-  { ...wd("meditation-am"), start: H(7, 15), end: H(7, 40) },
-  { ...wd("journal-am"), start: H(7, 40), end: H(8, 0) },
-  { ...wd("gym"), title: "Gym or Recovery", start: H(9, 0), end: H(10, 0), minMinutes: 30, detail: "Lift, or mobility and recovery. Your call — movement either way." },
-  { ...wd("breakfast"), start: H(10, 0), end: H(10, 30) },
+  { ...wd("meditation-am"), start: H(7, 15), end: H(7, 45) },
+  { ...wd("journal-am"), start: H(7, 45), end: H(8, 15) },
+  {
+    key: "breakfast",
+    title: "Breakfast",
+    pillar: "Body",
+    kind: "meal",
+    start: H(8, 15),
+    end: H(8, 45),
+    flexibility: "flexible",
+    priority: 3,
+    minMinutes: 15,
+    energy: "low",
+    detail: "High-protein meal. Hydrate.",
+    notify: false,
+  },
+  {
+    key: "reset",
+    title: "Weekly Reset",
+    pillar: "Body",
+    kind: "work",
+    start: H(9, 30),
+    end: H(13, 0),
+    flexibility: "flexible",
+    priority: 1,
+    minMinutes: 90,
+    energy: "medium",
+    detail:
+      "Groceries. Meal prep. Laundry. Gym bag replenished. Clothes prepared. Set next week up to run with zero friction.",
+    cue: "Reset day — groceries, meal prep, laundry, gym bag",
+  },
   {
     key: "weekly-review",
     title: "Weekly Review",
     pillar: "Mind",
     kind: "work",
-    start: H(11, 0),
-    end: H(13, 0),
+    start: H(14, 0),
+    end: H(16, 0),
     flexibility: "flexible",
     priority: 1,
     minMinutes: 45,
     energy: "high",
     detail:
-      "Trading, DRYP, finances, content analytics, weight and fitness, journal synthesis, alignment by pillar. Then plan the week.",
-    cue: "Weekly review — look at the whole picture",
-  },
-  {
-    key: "reset",
-    title: "Reset & Prep",
-    pillar: "Body",
-    kind: "work",
-    start: H(13, 30),
-    end: H(16, 30),
-    flexibility: "movable",
-    priority: 3,
-    minMinutes: 60,
-    energy: "medium",
-    detail: "Apartment, laundry, groceries, meal prep. Set next week up to run with zero friction.",
-    cue: "Reset day — set next week up",
+      "Calendar review. DRYP priorities. Trading preparation. Content review. Body and nutrition trends. Then the only question that matters: what are the three things that would make next week a win?",
+    cue: "Weekly review — what would make next week a win?",
   },
   wd("horizon"),
   {
-    key: "plan-week",
-    title: "Plan the Week",
-    pillar: "Mission",
-    kind: "work",
-    start: H(19, 30),
-    end: H(20, 15),
-    flexibility: "flexible",
-    priority: 2,
-    minMinutes: 25,
-    energy: "medium",
-    detail: "Calendar, top outcomes, deadlines, meetings. Decide the week before it decides you.",
-    cue: "Plan the week ahead",
+    key: "sunday-rest",
+    title: "Rest",
+    pillar: "Relationships",
+    kind: "ritual",
+    start: H(18, 30),
+    end: H(21, 30),
+    flexibility: "movable",
+    priority: 4,
+    minMinutes: 60,
+    energy: "low",
+    detail: "Full rest day. No gym, no obligation. Start Monday with zero friction.",
+    cue: "Rest — you built the week already",
   },
-  { ...wd("meditation-pm"), start: H(21, 15), end: H(21, 30) },
-  { ...wd("journal-pm"), start: H(21, 30), end: H(21, 45) },
+  { ...wd("meditation-pm"), start: H(21, 30), end: H(21, 50) },
+  { ...wd("journal-pm"), start: H(21, 50), end: H(22, 0) },
   { ...wd("sleep"), start: SLEEP.targetSleepMin, end: H(24, 0) },
 ];
 
@@ -421,6 +486,28 @@ export function dayTypeOf(dow: number): DayType {
   return "weekday";
 }
 
-export function templateFor(dayType: DayType): TemplateBlock[] {
-  return TEMPLATES[dayType].map((b) => ({ ...b }));
+/**
+ * The blocks for a day.
+ *
+ * Pass `dow` (0 = Sunday) to apply weekday policy — chiefly the gym, which is
+ * mandatory Mon/Tue/Thu/Fri, optional Saturday, and *absent* on Wednesday and
+ * Sunday. Dropping it rather than leaving it to be missed is deliberate: a rest
+ * day must not be able to cost a point of consistency, so it leaves the
+ * denominator too.
+ *
+ * Without `dow` you get the unfiltered template — useful for previewing a day
+ * type, but never for scoring a real date.
+ */
+export function templateFor(dayType: DayType, dow?: number): TemplateBlock[] {
+  let blocks = TEMPLATES[dayType].map((b) => ({ ...b }));
+  if (dow !== undefined && gymStatusFor(dow) === "rest") {
+    blocks = blocks.filter((b) => b.key !== "gym");
+  }
+  return blocks;
+}
+
+/** The blocks for a real ET date, with weekday policy applied. */
+export function templateForDate(dateStr: string): TemplateBlock[] {
+  const dow = new Date(`${dateStr}T12:00:00Z`).getUTCDay();
+  return templateFor(dayTypeOf(dow), dow);
 }

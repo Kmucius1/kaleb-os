@@ -172,41 +172,79 @@ export function planHorizonWalk(opts: {
     };
   };
 
-  if (pref === "sunrise") return sunrisePlan(`Sunrise is at ${fmt(opts.sun.sunriseMin)} — your standing preference.`);
-
-  const evening = sunsetPlan();
   const overlaps = (a: { start: number; end: number }, b: { start: number; end: number }) =>
     a.start < b.end && b.start < a.end;
 
-  // Anything protected that the sunset walk would collide with (travel included).
-  const eveningSpan = { start: evening.leaveAt, end: evening.end + travel };
-  const clash = opts.busy.find(
-    (b) => b.flexibility === "protected" && overlaps(eveningSpan, b)
-  );
+  // Everything already holding time today, not just protected work. The walk
+  // used to dodge only protected blocks while the conflict detector flagged
+  // every overlap — so a walk laid over the morning journal looked fine here
+  // and raised a conflict downstream. One rule now, applied in both places.
+  const clashWith = (span: { start: number; end: number }) =>
+    opts.busy.filter((b) => overlaps(span, b)).sort((a, b) => b.end - a.end)[0];
+
+  /** Slide a plan later until its travel clears whatever it lands on. */
+  const clear = (plan: HorizonPlan, latest: number): HorizonPlan | null => {
+    let p = plan;
+    for (let i = 0; i < 8; i++) {
+      const c = clashWith({ start: p.leaveAt, end: p.end + travel });
+      if (!c) return p;
+      const startAt = c.end + travel;
+      p = {
+        ...p,
+        start: startAt,
+        end: startAt + duration,
+        leaveAt: startAt - travel,
+        why: `${p.window === "sunset" ? "Sunset" : "Sunrise"} is at ${fmt(p.sunMin)}. Starting ${fmt(startAt)} so it clears ${c.title}.`,
+      };
+      if (p.end + travel > latest) return null;
+    }
+    return null;
+  };
+
+  const evening = sunsetPlan();
+  const morning = sunrisePlan(`Sunrise is at ${fmt(opts.sun.sunriseMin)}.`);
+
+  if (pref === "sunrise") {
+    return clear(morning, sleepTarget) ?? morning;
+  }
+
+  const eveningClash = clashWith({ start: evening.leaveAt, end: evening.end + travel });
   const breaksSleep = evening.end + travel > sleepTarget;
 
   if (pref === "sunset") {
-    // Honour the explicit preference but say so when it costs something.
-    if (clash) return { ...evening, why: `${evening.why} Heads up: this overlaps ${clash.title}.` };
+    if (!eveningClash && !breaksSleep) return evening;
+    // Nudging only helps a collision. If the walk simply runs past bedtime,
+    // moving it later makes that worse — say so instead.
+    if (eveningClash && !breaksSleep) {
+      const nudged = clear(evening, sleepTarget);
+      if (nudged) return nudged;
+    }
     if (breaksSleep) return { ...evening, why: `${evening.why} Heads up: you'd get home after your sleep target.` };
-    return evening;
+    return { ...evening, why: `${evening.why} Heads up: this overlaps ${eveningClash?.title}.` };
   }
 
-  if (clash) {
-    return sunrisePlan(
-      `Sunset at ${fmt(opts.sun.sunsetMin)} collides with ${clash.title}, so take sunrise at ${fmt(opts.sun.sunriseMin)} instead.`
-    );
+  // "Either": take the clean sunset, then a sunset nudged clear, then a sunrise
+  // that actually fits, and only then an honest warning. The walk is never
+  // silently laid on top of something else.
+  if (!eveningClash && !breaksSleep) return evening;
+
+  if (!breaksSleep) {
+    const nudged = clear(evening, sleepTarget);
+    if (nudged) return nudged;
   }
+
+  const morningFits = clear(morning, opts.sun.sunriseMin + 240);
+  if (morningFits && morningFits.leaveAt >= wake) {
+    return {
+      ...morningFits,
+      why: `${breaksSleep ? `Walking at sunset would put you home after your ${fmt(sleepTarget)} sleep target` : `Sunset at ${fmt(opts.sun.sunsetMin)} collides with ${eveningClash?.title}`} — sunrise at ${fmt(opts.sun.sunriseMin)} protects both.`,
+    };
+  }
+
   if (breaksSleep) {
-    return sunrisePlan(
-      `Walking at sunset would put you home after your ${fmt(sleepTarget)} sleep target — sunrise at ${fmt(opts.sun.sunriseMin)} protects both.`
-    );
+    return { ...evening, why: `${evening.why} Heads up: you'd get home after your sleep target.` };
   }
-  if (evening.leaveAt < wake) {
-    // Absurd edge (polar-style data); fall back to sunrise.
-    return sunrisePlan(`Sunset timing is unusable today — sunrise at ${fmt(opts.sun.sunriseMin)}.`);
-  }
-  return evening;
+  return { ...evening, why: `${evening.why} Heads up: this overlaps ${eveningClash?.title}.` };
 }
 
 function fmt(min: number): string {

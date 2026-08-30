@@ -11,6 +11,7 @@ import { supabase } from "../supabase";
 import { materializeDay, rebalanceDay, dowOfDateStr } from "./engine";
 import { estimateSun, horizonWeek, minutesInZone, zoneOffsetMinutes, type SunTimes, type HorizonChoice } from "./sun";
 import { dayTypeOf, templateFor } from "./template";
+import { toPillar } from "./pillars";
 import type { PlannedBlock, TemplateBlock } from "./types";
 
 export const TZ = "America/New_York";
@@ -240,7 +241,8 @@ type InstanceRow = {
  */
 async function blockMeta(dateStr: string, keys: string[]): Promise<Map<string, TemplateBlock>> {
   const map = new Map<string, TemplateBlock>();
-  const tpl = templateFor(dayTypeOf(dowOfDateStr(dateStr)));
+  const dow = dowOfDateStr(dateStr);
+  const tpl = templateFor(dayTypeOf(dow), dow);
   for (const key of keys) {
     const found = tpl.find((b) => b.key === key);
     if (found) map.set(key, found);
@@ -253,7 +255,7 @@ async function blockMeta(dateStr: string, keys: string[]): Promise<Map<string, T
       map.set(`event:${e.id}`, {
         key: `event:${e.id}`,
         title: e.title,
-        pillar: (e.pillar as TemplateBlock["pillar"]) ?? "Mission",
+        pillar: toPillar(e.pillar),
         kind: "event",
         start: e.start_min ?? 0,
         end: e.end_min ?? (e.start_min ?? 0) + 60,

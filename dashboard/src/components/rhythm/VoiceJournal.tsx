@@ -125,7 +125,7 @@ export default function VoiceJournal() {
     const entry = {
       content: text.trim(), moment, transcript: text.trim(),
       mood: mood ?? undefined, energy: energy ?? undefined,
-      pillar: moment === 'trading' ? 'Money' : moment === 'idea' ? 'Mission' : 'Spirit',
+      pillar: moment === 'trading' ? 'Trading' : moment === 'idea' ? 'Brand' : 'Mind',
     }
 
     // No signal — keep it on the device rather than losing what he just said.

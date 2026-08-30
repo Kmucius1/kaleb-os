@@ -1,6 +1,5 @@
 import { supabase } from './supabase'
-import { dayTypeOf, dowOfDateStr } from './schedule'
-import { templateFor } from './rhythm/template'
+import { templateForDate } from './rhythm/template'
 
 // The unified "did I actually run my life today?" score. It rolls up every kind
 // of progress the app tracks — schedule check-offs, habits, journaling — into a
@@ -18,8 +17,8 @@ export type DayConsistency = { date: string; score: number; categories: Category
 // Raw per-day tallies, fetched once over a range then bucketed by date.
 type DayData = { blocksDone: number; habitsDone: number; journaled: boolean }
 
-function computeDay(dateStr: string, d: DayData, activeHabits: number, blockCounts: Record<string, number>): DayConsistency {
-  const blockTotal = blockCounts[dayTypeOf(dowOfDateStr(dateStr))] || 0
+function computeDay(dateStr: string, d: DayData, activeHabits: number): DayConsistency {
+  const blockTotal = gradableCountFor(dateStr)
   const cats: Category[] = [
     { key: 'schedule', label: 'Schedule', color: '#6366f1', done: d.blocksDone, total: blockTotal, weight: 3, pct: blockTotal ? Math.round((d.blocksDone / blockTotal) * 100) : 0 },
     { key: 'habits', label: 'Habits', color: '#34d399', done: d.habitsDone, total: activeHabits, weight: 2, pct: activeHabits ? Math.round((d.habitsDone / activeHabits) * 100) : 0 },
@@ -34,18 +33,24 @@ function computeDay(dateStr: string, d: DayData, activeHabits: number, blockCoun
 async function commonRefs() {
   const { count: activeHabits } = await supabase
     .from('habits').select('id', { count: 'exact', head: true }).eq('active', true)
-  // Denominator comes from the rhythm template in code, not the schedule_blocks
-  // table — so the score is correct whether or not the table has been reseeded.
-  const blockCounts: Record<string, number> = {
-    weekday: templateFor('weekday').filter(gradable).length,
-    saturday: templateFor('saturday').filter(gradable).length,
-    sunday: templateFor('sunday').filter(gradable).length,
-  }
-  return { activeHabits: activeHabits ?? 0, blockCounts }
+  return { activeHabits: activeHabits ?? 0 }
 }
 
 // Sleep isn't checked off like the other blocks, so it never counts against him.
 const gradable = (b: { kind: string }) => b.kind !== 'sleep'
+
+// Denominator comes from the rhythm template in code, not the schedule_blocks
+// table — so the score is correct whether or not the table has been reseeded.
+// Per-date, because Wednesday and Sunday generate no gym block: on a rest day
+// the denominator shrinks with the day instead of scoring a miss.
+const countCache = new Map<string, number>()
+function gradableCountFor(dateStr: string): number {
+  const cached = countCache.get(dateStr)
+  if (cached !== undefined) return cached
+  const n = templateForDate(dateStr).filter(gradable).length
+  countCache.set(dateStr, n)
+  return n
+}
 
 // Trend of daily scores for the last `n` days (oldest → newest), plus today's
 // full breakdown and the current streak (consecutive days scoring ≥ threshold).
@@ -54,7 +59,7 @@ export async function getConsistencyTrend(n = 14, streakThreshold = 60): Promise
 }> {
   const today = etToday()
   const from = daysAgo(today, n - 1)
-  const { activeHabits, blockCounts } = await commonRefs()
+  const { activeHabits } = await commonRefs()
 
   const [compRes, habitRes, jrnlRes] = await Promise.all([
     supabase.from('completions').select('done_date').eq('ref_type', 'block').gte('done_date', from),
@@ -69,7 +74,7 @@ export async function getConsistencyTrend(n = 14, streakThreshold = 60): Promise
   for (const j of jrnlRes.data ?? []) bucket(etDateOf((j as any).created_at)).journaled = true
 
   const dates = Array.from({ length: n }, (_, i) => daysAgo(today, n - 1 - i))
-  const days = dates.map(d => computeDay(d, data.get(d) ?? { blocksDone: 0, habitsDone: 0, journaled: false }, activeHabits, blockCounts))
+  const days = dates.map(d => computeDay(d, data.get(d) ?? { blocksDone: 0, habitsDone: 0, journaled: false }, activeHabits))
 
   // Streak: walk backward from today while score ≥ threshold.
   let streak = 0
