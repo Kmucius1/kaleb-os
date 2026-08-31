@@ -8,6 +8,8 @@ import { SLEEP } from '@/lib/rhythm/template'
 import { fmtMin } from '@/lib/rhythm/engine'
 import { pillarColor } from '@/lib/rhythm/pillars'
 import NowCard from '@/components/rhythm/NowCard'
+import TodayCard from '@/components/season/TodayCard'
+import { getTodayCard, getSeasonProgress } from '@/lib/season'
 import HorizonCard from '@/components/rhythm/HorizonCard'
 import AlignmentBar from '@/components/rhythm/AlignmentBar'
 
@@ -23,7 +25,9 @@ export default async function HomePage() {
   const day = await resolveDay()
   const alignment = scoreDay(day.blocks, day.nowMin)
 
-  const [{ data: tasks }, { data: cfg }] = await Promise.all([
+  const [today, season, { data: tasks }, { data: cfg }] = await Promise.all([
+    getTodayCard(),
+    getSeasonProgress(),
     // His own, highest-scored first. Without the owner filter this was showing
     // whichever three of 306 equally-weighted rows came back first.
     supabase.from('tasks').select('title').in('status', ['pending', 'in_progress'])
@@ -82,6 +86,8 @@ export default async function HomePage() {
       <p className="rise rise-1" style={{ fontSize: 14.5, color: 'var(--foreground-2)', lineHeight: 1.45, margin: '0 0 20px' }}>
         {focus}
       </p>
+
+      <TodayCard initial={today} season={season} />
 
       <NowCard
         initialBlocks={day.blocks}
