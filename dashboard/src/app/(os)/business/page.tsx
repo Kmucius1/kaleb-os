@@ -1,3 +1,4 @@
+import LeverageCard from '@/components/business/LeverageCard'
 import { supabaseDryp } from '@/lib/supabaseDryp'
 import { supabase } from '@/lib/supabase'
 import { getRevenueSnapshot, type RevenueSnapshot } from '@/lib/ledger'
@@ -48,6 +49,8 @@ async function PersonalBusiness() {
       <PageHeader icon={Rocket} tint="#6366f1" title="Personal" subtitle="Your ventures & income" />
 
       {/* Stats */}
+      <LeverageCard />
+
       <div className="stat-grid rise rise-2" style={{ margin: '0 0 26px' }}>
         <StatCard label="INCOME / MO" value={totalMtd > 0 ? money(totalMtd) : '—'} accent="var(--green)" sub="across endeavors" />
         <StatCard label="ALL-TIME" value={totalAll > 0 ? money(totalAll) : '—'} accent="var(--purple)" sub="total earned" />
