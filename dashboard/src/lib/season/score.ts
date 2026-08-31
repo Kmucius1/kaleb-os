@@ -78,6 +78,10 @@ export type SeasonProgress = {
   series: { date: string; pct: number }[]
 }
 
+/** Daily protein target. One number, shared by the Today score and Fuel's
+ *  insights so the two can never disagree about the goal. */
+export const PROTEIN_TARGET_G = 180
+
 /* ------------------------------------------------------- row definitions */
 
 // Each row can be satisfied from more than one place, because the same fact is
@@ -146,9 +150,9 @@ export const ROWS: RowDef[] = [
   // Two posts a day. Real posts win once the content engine is logging them;
   // until then the habit carries it.
   { key: 'content', label: 'Content', target: 2, pillar: 'Brand', habits: [{ name: 'Content', counts: true }] },
-  // Interim source until Fuel lands: protein is the one nutrition number
-  // already tracked. Phase 4 replaces this with logged meals.
-  { key: 'nutrition', label: 'Nutrition', target: 1, pillar: 'Body', habits: [{ name: 'Protein Goal', min: 180 }] },
+  // Confirmed meals drive this; the Protein Goal habit remains a manual
+  // fallback for a day he ate without photographing anything.
+  { key: 'nutrition', label: 'Nutrition', target: 1, pillar: 'Body', habits: [{ name: 'Protein Goal', min: PROTEIN_TARGET_G }] },
   { key: 'sleep', label: '10 PM Sleep', target: 1, pillar: 'Body', blocks: ['sleep'], habits: [{ name: 'Sleep', min: 8 }] },
 ]
 
@@ -162,9 +166,12 @@ export type DayFacts = {
   habits: Map<string, { value: number; done: boolean }>
   /** Posts published that day. */
   posts: number
+  /** Protein from CONFIRMED meals. An unreviewed estimate is not a fact, so it
+   *  never contributes to the day's score. */
+  proteinG: number
 }
 
-export const emptyFacts = (): DayFacts => ({ blocks: new Set(), habits: new Map(), posts: 0 })
+export const emptyFacts = (): DayFacts => ({ blocks: new Set(), habits: new Map(), posts: 0, proteinG: 0 })
 
 /** Score one date from already-fetched facts. Pure, so it is easy to test. */
 export function scoreDay(dateStr: string, facts: DayFacts): TodayCard {
@@ -183,6 +190,7 @@ export function scoreDay(dateStr: string, facts: DayFacts): TodayCard {
       else if (h.min !== undefined ? log.value >= h.min : log.done || log.value > 0) done++
     }
     if (def.key === 'content') done = Math.max(done, facts.posts)
+    if (def.key === 'nutrition' && facts.proteinG >= PROTEIN_TARGET_G) done = Math.max(done, 1)
 
     return { key: def.key, label: def.label, done: Math.min(done, def.target), target: def.target, pillar: def.pillar }
   })

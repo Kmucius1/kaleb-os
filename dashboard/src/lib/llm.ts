@@ -64,3 +64,67 @@ export async function chatJSON<T = unknown>(
     return JSON.parse(match[0]) as T;
   }
 }
+
+/* --------------------------------------------------------------- vision */
+
+export type VisionPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+/**
+ * One-shot vision call: a system prompt, some text, and an image.
+ *
+ * The image is passed as a data URI rather than a URL, so it works with a
+ * private storage bucket and never requires making a photo of Kaleb's food
+ * publicly readable to have it analysed.
+ *
+ * `model` must be a vision-capable model; the default OPENROUTER_MODEL
+ * (gemini-2.5-flash) is.
+ */
+export async function vision(
+  opts: {
+    system?: string;
+    prompt: string;
+    /** Raw image bytes plus its mime type. */
+    image: { base64: string; mime: string };
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+    jsonMode?: boolean;
+  },
+): Promise<string> {
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) throw new Error("OPENROUTER_API_KEY is not set");
+
+  const parts: VisionPart[] = [
+    { type: "text", text: opts.prompt },
+    { type: "image_url", image_url: { url: `data:${opts.image.mime};base64,${opts.image.base64}` } },
+  ];
+
+  const res = await fetch(OPENROUTER_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://kalebos.app",
+      "X-Title": "Kaleb OS Fuel",
+    },
+    body: JSON.stringify({
+      model: opts.model || LLM_MODEL,
+      temperature: opts.temperature ?? 0.2,
+      messages: [
+        ...(opts.system ? [{ role: "system", content: opts.system }] : []),
+        { role: "user", content: parts },
+      ],
+      ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}),
+      ...(opts.jsonMode ? { response_format: { type: "json_object" } } : {}),
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`OpenRouter vision ${res.status}: ${text.slice(0, 500)}`);
+  }
+  const data = await res.json();
+  return data?.choices?.[0]?.message?.content ?? "";
+}

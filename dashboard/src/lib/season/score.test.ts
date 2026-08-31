@@ -7,7 +7,7 @@ const MON = '2026-09-07'
 const WED = '2026-09-09'
 const SUN = '2026-09-13'
 
-const facts = (o: { blocks?: string[]; habits?: Record<string, number | boolean>; posts?: number } = {}) => ({
+const facts = (o: { blocks?: string[]; habits?: Record<string, number | boolean>; posts?: number; proteinG?: number } = {}) => ({
   blocks: new Set(o.blocks ?? []),
   habits: new Map(
     Object.entries(o.habits ?? {}).map(([name, v]) => [
@@ -16,6 +16,7 @@ const facts = (o: { blocks?: string[]; habits?: Record<string, number | boolean>
     ]),
   ),
   posts: o.posts ?? 0,
+  proteinG: o.proteinG ?? 0,
 })
 
 const row = (c: ReturnType<typeof scoreDay>, key: string) => c.rows.find(r => r.key === key)!
@@ -60,6 +61,16 @@ describe('the seven rows', () => {
     expect(row(scoreDay(MON, facts({ habits: { Content: 1 } })), 'content').done).toBe(1)
     expect(row(scoreDay(MON, facts({ habits: { Content: 2 } })), 'content').done).toBe(2)
     expect(row(scoreDay(MON, facts({ habits: { Content: 9 } })), 'content').done).toBe(2)
+  })
+
+  it('lets confirmed meals satisfy nutrition without the habit', () => {
+    expect(row(scoreDay(MON, facts({ proteinG: 195 })), 'nutrition').done).toBe(1)
+    expect(row(scoreDay(MON, facts({ proteinG: 140 })), 'nutrition').done).toBe(0)
+  })
+
+  it('never double-counts meals and the protein habit', () => {
+    const c = scoreDay(MON, facts({ proteinG: 195, habits: { 'Protein Goal': 195 } }))
+    expect(row(c, 'nutrition').done).toBe(1)
   })
 
   it('requires a count habit to actually reach its number', () => {

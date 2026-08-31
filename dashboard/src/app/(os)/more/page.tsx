@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { countTasksNow } from '@/lib/taskCount'
-import {
+import { Apple,
   CircleCheckBig, Target, FolderOpen, BarChart2, Clapperboard, Briefcase, Wallet,
   Users, LineChart, Settings, ChevronRight, Inbox, Brain, TrendingUp, CheckSquare,
   CheckCircle2, ShoppingBag, Star, Calendar, Zap, Link2, ScrollText, Flame, FileText,
@@ -26,6 +26,7 @@ export default async function MorePage() {
       items: [
         { href: '/tasks', label: 'Tasks', icon: CheckSquare, badge: tasks ?? 0 },
         { href: '/habits', label: 'Habits', icon: CircleCheckBig },
+        { href: '/fuel', label: 'Fuel', icon: Apple, note: 'Meals, macros, body trends' },
         { href: '/goals', label: 'Goals', icon: Target },
         { href: '/projects', label: 'Projects', icon: FolderOpen },
         { href: '/approvals', label: 'Approvals', icon: CheckCircle2, badge: approvals ?? 0 },

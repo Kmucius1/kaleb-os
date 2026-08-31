@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import {
+import { Apple,
   LayoutDashboard, FileText, CheckCircle2, CheckSquare, Target, FolderOpen,
   Lightbulb, Inbox, Brain, Users, TrendingUp, BarChart2, Briefcase, Star,
   Calendar, Zap, Link2, ScrollText, Settings, Wallet, Clapperboard, Sparkles, LayoutGrid,
@@ -42,6 +42,7 @@ const buildNav = (approvalCount: number, taskCount: number): NavSection[] => [
     items: [
       { href: '/tasks', label: 'Tasks', icon: CheckSquare, badge: taskCount },
       { href: '/habits', label: 'Habits', icon: CircleCheckBig },
+      { href: '/fuel', label: 'Fuel', icon: Apple },
       { href: '/consistency', label: 'Consistency', icon: Flame },
       { href: '/goals', label: 'Goals', icon: Target },
       { href: '/projects', label: 'Projects', icon: FolderOpen },
