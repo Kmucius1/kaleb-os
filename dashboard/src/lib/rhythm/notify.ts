@@ -10,6 +10,7 @@ import { fmtMin } from "./engine";
 import { SLEEP } from "./template";
 import type { ResolvedDay } from "./day";
 import type { PlannedBlock } from "./types";
+import { pickMessage, slotForBlock, type Bank } from "./bank";
 
 export type Notice = {
   /** Dedup key — one per day. */
@@ -28,7 +29,9 @@ export function inQuietHours(nowMin: number): boolean {
 }
 
 const PILLAR_EMOJI: Record<string, string> = {
-  Spirit: "🧘", Mind: "🧠", Body: "💪", Money: "💰", Mission: "🚀", Relationships: "🤝",
+  DRYP: "💰", Mind: "🧘", Body: "💪", Trading: "📈", Brand: "🚀", Relationships: "🤝",
+  // Legacy names, for a block that has not been remapped yet.
+  Spirit: "🧘", Money: "💰", Mission: "🚀",
 };
 
 /** How close to a moment counts as "now" — tolerates an infrequent cron. */
@@ -39,7 +42,7 @@ const due = (nowMin: number, at: number) => nowMin >= at && nowMin < at + WINDOW
  * Everything that deserves a push right now, given the resolved day.
  * Pure: the caller decides how to send and how to dedup.
  */
-export function noticesFor(day: ResolvedDay, nowMin: number): Notice[] {
+export function noticesFor(day: ResolvedDay, nowMin: number, bank: Bank = {}): Notice[] {
   if (inQuietHours(nowMin)) return [];
   const out: Notice[] = [];
   const dateTag = day.dateStr;
@@ -61,10 +64,17 @@ export function noticesFor(day: ResolvedDay, nowMin: number): Notice[] {
 
     // The block itself.
     if (due(nowMin, b.start)) {
+      const slot = slotForBlock(b.key);
+      const line = slot ? pickMessage(bank, slot, dateTag) : null;
+      const why = whyItMatters(b, day, { includeDetail: !line });
       out.push({
         id: `block:${b.key}:${dateTag}`,
         title: `${PILLAR_EMOJI[b.pillar] ?? "⏱️"} ${b.cue ?? b.title}`,
-        body: whyItMatters(b, day),
+        // The line leads; the mechanics follow. A push that opens with "Two
+        // posts. That's it." lands differently from one that opens with a
+        // time range.
+        body: [line, why].filter(Boolean).join(" ").slice(0, 300),
+        // (the line replaces b.detail — see whyItMatters)
         url: b.kind === "journal" ? "/journal" : "/",
         tag: "schedule",
       });
@@ -113,11 +123,16 @@ export function noticesFor(day: ResolvedDay, nowMin: number): Notice[] {
   }
 
   // Wind-down — protecting eight hours starts 30 minutes before lights out.
-  if (due(nowMin, SLEEP.targetSleepMin - 30)) {
+  const shutdownAt = day.blocks.find((b) => b.key === "meditation-pm")?.start;
+  const shutdownCoversWindDown =
+    shutdownAt !== undefined && Math.abs(shutdownAt - (SLEEP.targetSleepMin - 30)) <= 20;
+  if (!shutdownCoversWindDown && due(nowMin, SLEEP.targetSleepMin - 30)) {
+    const line = pickMessage(bank, "sleep", dateTag);
     out.push({
       id: `winddown:${dateTag}`,
       title: "🌙 Wind down",
-      body: `Sleep target is ${fmtMin(SLEEP.targetSleepMin)}. That's your eight hours before a ${fmtMin(SLEEP.wakeMin)} wake.`,
+      body: [line, `Sleep target is ${fmtMin(SLEEP.targetSleepMin)} — eight hours before a ${fmtMin(SLEEP.wakeMin)} wake.`]
+        .filter(Boolean).join(" "),
       url: "/journal",
       tag: "sleep",
     });
@@ -137,10 +152,13 @@ export function noticesFor(day: ResolvedDay, nowMin: number): Notice[] {
   return out;
 }
 
-function whyItMatters(b: PlannedBlock, day: ResolvedDay): string {
+function whyItMatters(b: PlannedBlock, day: ResolvedDay, opts: { includeDetail?: boolean } = {}): string {
   const bits: string[] = [];
   if (b.theme) bits.push(`Today: ${b.theme}.`);
-  if (b.detail) bits.push(b.detail);
+  // The block's prose detail and its motivational line say the same thing in
+  // the same words often enough ("Progressive overload…" twice) that running
+  // both reads like a bug. When a line is speaking, it speaks alone.
+  if (b.detail && opts.includeDetail !== false) bits.push(b.detail);
   if (b.flexibility === "protected") bits.push("This one is protected.");
   if (b.key === "trading") {
     bits.push(`Two hours. ${fmtMin(b.start)}–${fmtMin(b.end)}.`);

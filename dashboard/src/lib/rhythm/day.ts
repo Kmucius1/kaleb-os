@@ -12,6 +12,7 @@ import { materializeDay, rebalanceDay, dowOfDateStr } from "./engine";
 import { estimateSun, horizonWeek, minutesInZone, zoneOffsetMinutes, type SunTimes, type HorizonChoice } from "./sun";
 import { dayTypeOf, templateFor } from "./template";
 import { toPillar } from "./pillars";
+import { SLOTS, type Bank, type Slot } from "./bank";
 import type { PlannedBlock, TemplateBlock } from "./types";
 
 export const TZ = "America/New_York";
@@ -447,4 +448,29 @@ export async function toggleLock(dateStr: string, key: string): Promise<string[]
   const locked = state.locked.includes(key) ? state.locked.filter((k) => k !== key) : [...state.locked, key];
   await setDayState(dateStr, { ...state, locked });
   return locked;
+}
+
+/**
+ * The notification message bank, slot → lines.
+ *
+ * Missing table or empty slot is not an error: notify.ts falls back to the
+ * block's own detail, so notifications keep working on a database where
+ * 0029 has not been applied.
+ */
+export async function getMessageBank(): Promise<Bank> {
+  const { data, error } = await supabase
+    .from("notification_messages")
+    .select("slot,text")
+    .eq("active", true);
+  if (error || !data) return {};
+  const bank: Bank = {};
+  for (const row of data as { slot: string; text: string }[]) {
+    const slot = row.slot as Slot;
+    if (!SLOTS.includes(slot)) continue;
+    (bank[slot] ??= []).push(row.text);
+  }
+  // Stable order, so the picker's index means the same thing on every call
+  // regardless of what order Postgres handed the rows back.
+  for (const slot of Object.keys(bank) as Slot[]) bank[slot]!.sort();
+  return bank;
 }

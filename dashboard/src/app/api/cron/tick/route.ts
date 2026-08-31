@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { supabaseDryp } from '@/lib/supabaseDryp'
 import { sendPushToAll, claimOnce } from '@/lib/push'
 import { getTodaySchedule, fmtClock } from '@/lib/schedule'
-import { resolveDay } from '@/lib/rhythm/day'
+import { resolveDay, getMessageBank } from '@/lib/rhythm/day'
 import { noticesFor } from '@/lib/rhythm/notify'
 // Only fire a block/event within this many minutes of its start (one tick after
 // it begins) so a mid-day deploy doesn't replay the whole morning.
@@ -57,8 +57,8 @@ export async function GET(request: Request) {
   // Horizon Walk, wind-down and conflicts. Every notice explains why it matters
   // and is claimed once per day.
   try {
-    const day = await resolveDay()
-    for (const n of noticesFor(day, nowMin)) {
+    const [day, bank] = await Promise.all([resolveDay(), getMessageBank()])
+    for (const n of noticesFor(day, nowMin, bank)) {
       if (!(await claimOnce('rhythm', n.id, n.title, n.body))) continue
       const r = await sendPushToAll({ title: n.title, body: n.body, url: n.url, tag: n.tag })
       sent += r.sent
